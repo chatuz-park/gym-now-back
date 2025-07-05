@@ -20,13 +20,17 @@ class Client(models.Model):
     subscription_type = models.CharField(max_length=20, choices=SUBSCRIPTION_CHOICES, null=True, blank=True)
     subscription_start = models.DateField(null=True, blank=True)
     subscription_end = models.DateField(null=True, blank=True)
-    assigned_routines = models.ManyToManyField('Routine', blank=True, related_name='clients')
     notes = models.TextField(null=True, blank=True)
     emergency_contact = models.CharField(max_length=100, null=True, blank=True)
     medical_conditions = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.name
+
+    @property
+    def assigned_routines(self):
+        """Obtener las rutinas asignadas a través de ClientRoutine"""
+        return [cr.routine for cr in self.client_routines.filter(is_active=True)]
 
 class Exercise(models.Model):
     DIFFICULTY_CHOICES = [
@@ -93,7 +97,7 @@ class Routine(models.Model):
         return self.name
 
 class ClientRoutine(models.Model):
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='client_routines')
     routine = models.ForeignKey(Routine, on_delete=models.CASCADE)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)

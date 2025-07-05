@@ -11,7 +11,6 @@ class ClientAdmin(admin.ModelAdmin):
     list_filter = ['subscription_type', 'join_date', 'age']
     search_fields = ['name', 'email', 'phone']
     readonly_fields = ['join_date']
-    filter_horizontal = ['assigned_routines']
     
     def is_active(self, obj):
         return obj.subscription_end is None or obj.subscription_end > timezone.now().date()

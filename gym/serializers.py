@@ -35,12 +35,25 @@ class RoutineSerializer(serializers.ModelSerializer):
         model = Routine
         fields = '__all__'
 
+class ClientRoutineDetailSerializer(serializers.ModelSerializer):
+    """Serializer para mostrar detalles completos de una asignación de rutina"""
+    routine = RoutineSerializer(read_only=True)
+    
+    class Meta:
+        model = ClientRoutine
+        fields = ['id', 'routine', 'start_date', 'end_date', 'is_active', 'assigned_days']
+
 class ClientSerializer(serializers.ModelSerializer):
-    assigned_routines = RoutineSerializer(many=True, read_only=True)
+    assigned_routines = serializers.SerializerMethodField()
 
     class Meta:
         model = Client
         fields = '__all__'
+
+    def get_assigned_routines(self, obj):
+        """Obtener las asignaciones completas de rutinas con sus detalles"""
+        from .serializers import ClientRoutineDetailSerializer
+        return ClientRoutineDetailSerializer(obj.client_routines.filter(is_active=True), many=True).data
 
 class ClientRoutineSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
@@ -59,6 +72,31 @@ class ClientRoutineSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientRoutine
         fields = ['id', 'client', 'client_id', 'routine', 'routine_id', 'start_date', 'end_date', 'is_active', 'assigned_days']
+
+    def validate(self, data):
+        """
+        Validar que no se asigne la misma rutina al mismo cliente más de una vez
+        """
+        client = data.get('client')
+        routine = data.get('routine')
+        
+        # Verificar si ya existe una asignación activa para este cliente y rutina
+        existing_assignment = ClientRoutine.objects.filter(
+            client=client,
+            routine=routine,
+            is_active=True
+        )
+        
+        # Si estamos actualizando, excluir la instancia actual
+        if self.instance:
+            existing_assignment = existing_assignment.exclude(pk=self.instance.pk)
+        
+        if existing_assignment.exists():
+            raise serializers.ValidationError(
+                f"El cliente '{client.name}' ya tiene asignada la rutina '{routine.name}' de forma activa."
+            )
+        
+        return data
 
 class RoutineProgressSerializer(serializers.ModelSerializer):
     client_routine = ClientRoutineSerializer(read_only=True)

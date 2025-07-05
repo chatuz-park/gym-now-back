@@ -44,7 +44,7 @@ class ClientViewSet(viewsets.ModelViewSet):
     def routines(self, request, pk=None):
         """Obtener las rutinas asignadas a un cliente"""
         client = self.get_object()
-        routines = client.assigned_routines.all()
+        routines = client.assigned_routines
         serializer = RoutineSerializer(routines, many=True)
         return Response(serializer.data)
 

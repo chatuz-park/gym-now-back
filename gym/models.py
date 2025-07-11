@@ -6,6 +6,25 @@ from datetime import date
 
 # Create your models here.
 
+class CustomUser(models.Model):
+    """Modelo personalizado de usuario que extiende el User de Django"""
+    ROLE_CHOICES = [
+        ('client', 'Client'),
+        ('trainer', 'Trainer'),
+        ('guest', 'Guest'),
+        ('owner', 'Owner'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='custom_profile')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='client')
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
+    
+    class Meta:
+        verbose_name = "Custom User"
+        verbose_name_plural = "Custom Users"
+
 class Client(models.Model):
     SUBSCRIPTION_CHOICES = [
         ('standard', 'Standard'),
@@ -47,13 +66,36 @@ class Client(models.Model):
         """Obtener las rutinas asignadas a través de ClientRoutine"""
         return [cr.routine for cr in self.client_routines.filter(is_active=True)]
 
+    def clean(self):
+        """Validar que el email y teléfono sean únicos"""
+        from django.core.exceptions import ValidationError
+        
+        # Verificar email único
+        if Client.objects.filter(email=self.email).exclude(pk=self.pk).exists():
+            raise ValidationError({'email': 'Este correo electrónico ya está registrado.'})
+        
+        # Verificar teléfono único
+        if Client.objects.filter(phone=self.phone).exclude(pk=self.pk).exists():
+            raise ValidationError({'phone': 'Este número de teléfono ya está registrado.'})
+
+    def save(self, *args, **kwargs):
+        """Validar antes de guardar"""
+        self.clean()
+        super().save(*args, **kwargs)
+
+
+@receiver(post_save, sender=User)
+def create_custom_user(sender, instance, created, **kwargs):
+    """Crear automáticamente un CustomUser cuando se crea un User"""
+    if created:
+        CustomUser.objects.get_or_create(user=instance)
 
 @receiver(post_save, sender=Client)
 def create_user_for_client(sender, instance, created, **kwargs):
     """Crear automáticamente un usuario cuando se crea un cliente"""
     if created and not instance.user:
-        # Generar username basado en el email
-        username = instance.email.split('@')[0]
+        # Usar el email completo como username
+        username = instance.email
         base_username = username
         counter = 1
         
@@ -75,6 +117,12 @@ def create_user_for_client(sender, instance, created, **kwargs):
         # Asignar el usuario al cliente
         instance.user = user
         instance.save(update_fields=['user'])
+        
+        # Asegurar que el CustomUser tenga el rol 'client'
+        custom_user, created = CustomUser.objects.get_or_create(user=user)
+        if custom_user.role != 'client':
+            custom_user.role = 'client'
+            custom_user.save()
 
 class Exercise(models.Model):
     DIFFICULTY_CHOICES = [

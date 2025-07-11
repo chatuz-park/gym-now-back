@@ -7,6 +7,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from .filters import ClientFilter, RoutineFilter, ExerciseFilter, WorkoutFilter
 from .models import (
     Client, Exercise, Workout, WorkoutSet, Routine, 
@@ -15,7 +17,8 @@ from .models import (
 from .serializers import (
     ClientSerializer, ExerciseSerializer, WorkoutSerializer, WorkoutSetSerializer,
     RoutineSerializer, ClientRoutineSerializer, RoutineProgressSerializer,
-    ProgressMetricsSerializer, GoalSerializer, WorkoutCreateSerializer, RoutineCreateSerializer
+    ProgressMetricsSerializer, GoalSerializer, WorkoutCreateSerializer, RoutineCreateSerializer,
+    UserProfileSerializer
 )
 
 # Create your views here.
@@ -27,7 +30,34 @@ class ClientViewSet(viewsets.ModelViewSet):
     filterset_class = ClientFilter
     search_fields = ['name', 'email', 'phone']
     ordering_fields = ['name', 'join_date', 'birth_date', 'weight', 'height']
-    ordering = ['name']
+    ordering = ['-join_date']  # Más reciente primero
+
+    @swagger_auto_schema(
+        operation_description="Lista de clientes con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'name', '-join_date', 'weight'",
+                type=openapi.TYPE_STRING,
+                enum=['name', '-name', 'join_date', '-join_date', 'birth_date', '-birth_date', 'weight', '-weight', 'height', '-height']
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Búsqueda en nombre, email y teléfono",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     @action(detail=True, methods=['get'])
     def progress(self, request, pk=None):
@@ -47,10 +77,12 @@ class ClientViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def routines(self, request, pk=None):
-        """Obtener las rutinas asignadas a un cliente"""
+        """Obtener las rutinas asignadas a un cliente, incluyendo días asignados y detalles de la asignación"""
         client = self.get_object()
-        routines = client.assigned_routines
-        serializer = RoutineSerializer(routines, many=True)
+        # Usar el serializer de detalle de asignación
+        from .serializers import ClientRoutineDetailSerializer
+        assignments = client.client_routines.filter(is_active=True)
+        serializer = ClientRoutineDetailSerializer(assignments, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
@@ -159,6 +191,33 @@ class ExerciseViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'difficulty']
     ordering = ['name']
 
+    @swagger_auto_schema(
+        operation_description="Lista de ejercicios con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'name', '-difficulty'",
+                type=openapi.TYPE_STRING,
+                enum=['name', '-name', 'difficulty', '-difficulty']
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Búsqueda en nombre y descripción",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     @action(detail=False, methods=['get'])
     def by_difficulty(self, request):
         """Obtener ejercicios por nivel de dificultad"""
@@ -188,6 +247,33 @@ class WorkoutViewSet(viewsets.ModelViewSet):
             return WorkoutCreateSerializer
         return WorkoutSerializer
 
+    @swagger_auto_schema(
+        operation_description="Lista de workouts con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'name', '-difficulty', 'estimated_duration'",
+                type=openapi.TYPE_STRING,
+                enum=['name', '-name', 'difficulty', '-difficulty', 'estimated_duration', '-estimated_duration']
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Búsqueda en nombre y descripción",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     @action(detail=True, methods=['get'])
     def sets(self, request, pk=None):
         """Obtener los sets de un workout específico"""
@@ -210,7 +296,28 @@ class WorkoutSetViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['workout', 'exercise', 'completed']
     ordering_fields = ['reps', 'weight', 'rest_time']
-    ordering = ['id']
+    ordering = ['-id']  # Más reciente primero
+
+    @swagger_auto_schema(
+        operation_description="Lista de workout sets con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'reps', '-weight', 'rest_time'",
+                type=openapi.TYPE_STRING,
+                enum=['reps', '-reps', 'weight', '-weight', 'rest_time', '-rest_time']
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 class RoutineViewSet(viewsets.ModelViewSet):
     queryset = Routine.objects.all()
@@ -220,6 +327,33 @@ class RoutineViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'duration', 'days_per_week', 'frequency']
     ordering = ['name']
+
+    @swagger_auto_schema(
+        operation_description="Lista de rutinas con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'name', '-duration', 'days_per_week'",
+                type=openapi.TYPE_STRING,
+                enum=['name', '-name', 'duration', '-duration', 'days_per_week', '-days_per_week', 'frequency', '-frequency']
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Búsqueda en nombre y descripción",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -307,6 +441,91 @@ class ClientRoutineViewSet(viewsets.ModelViewSet):
     ordering_fields = ['start_date', 'end_date']
     ordering = ['-start_date']
 
+    @swagger_auto_schema(
+        operation_description="Lista de rutinas de clientes con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'start_date', '-end_date'",
+                type=openapi.TYPE_STRING,
+                enum=['start_date', '-start_date', 'end_date', '-end_date']
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="Actualizar una rutina de cliente. Para assigned_days, puedes enviar:\n"
+                            "1. Lista de días: ['monday', 'wednesday', 'friday']\n"
+                            "2. Objeto con valores booleanos: {'monday': true, 'wednesday': true, 'friday': true}\n"
+                            "Días válidos: monday, tuesday, wednesday, thursday, friday, saturday, sunday",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'client_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del cliente'),
+                'routine_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la rutina'),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Fecha de inicio'),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Fecha de fin (opcional)'),
+                'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si la rutina está activa'),
+                'assigned_days': openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    description='Días asignados. Puede ser objeto con valores booleanos o lista de días',
+                    properties={
+                        'monday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'tuesday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'wednesday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'thursday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'friday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'saturday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'sunday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    }
+                )
+            }
+        )
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="Actualizar parcialmente una rutina de cliente. Para assigned_days, puedes enviar:\n"
+                            "1. Lista de días: ['monday', 'wednesday', 'friday']\n"
+                            "2. Objeto con valores booleanos: {'monday': true, 'wednesday': true, 'friday': true}\n"
+                            "Días válidos: monday, tuesday, wednesday, thursday, friday, saturday, sunday",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'client_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del cliente'),
+                'routine_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID de la rutina'),
+                'start_date': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Fecha de inicio'),
+                'end_date': openapi.Schema(type=openapi.TYPE_STRING, format='date', description='Fecha de fin (opcional)'),
+                'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Si la rutina está activa'),
+                'assigned_days': openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    description='Días asignados. Puede ser objeto con valores booleanos o lista de días',
+                    properties={
+                        'monday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'tuesday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'wednesday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'thursday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'friday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'saturday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'sunday': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    }
+                )
+            }
+        )
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
     @action(detail=True, methods=['get'])
     def progress(self, request, pk=None):
         """Obtener el progreso de una rutina de cliente específica"""
@@ -347,6 +566,27 @@ class RoutineProgressViewSet(viewsets.ModelViewSet):
     ordering_fields = ['completed_at', 'rating']
     ordering = ['-completed_at']
 
+    @swagger_auto_schema(
+        operation_description="Lista de progreso de rutinas con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'completed_at', '-rating'",
+                type=openapi.TYPE_STRING,
+                enum=['completed_at', '-completed_at', 'rating', '-rating']
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 class ProgressMetricsViewSet(viewsets.ModelViewSet):
     queryset = ProgressMetrics.objects.all()
     serializer_class = ProgressMetricsSerializer
@@ -354,6 +594,27 @@ class ProgressMetricsViewSet(viewsets.ModelViewSet):
     filterset_fields = ['client', 'date']
     ordering_fields = ['date', 'weight', 'body_fat', 'muscle_mass']
     ordering = ['-date']
+
+    @swagger_auto_schema(
+        operation_description="Lista de métricas de progreso con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'date', '-weight', 'body_fat'",
+                type=openapi.TYPE_STRING,
+                enum=['date', '-date', 'weight', '-weight', 'body_fat', '-body_fat', 'muscle_mass', '-muscle_mass']
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     @action(detail=False, methods=['get'])
     def client_progress(self, request):
@@ -376,7 +637,34 @@ class GoalViewSet(viewsets.ModelViewSet):
     filterset_fields = ['client', 'category', 'is_completed', 'deadline']
     search_fields = ['title', 'description']
     ordering_fields = ['deadline', 'target_value', 'current_value']
-    ordering = ['deadline']
+    ordering = ['deadline']  # Más urgente primero (deadline ascendente)
+
+    @swagger_auto_schema(
+        operation_description="Lista de objetivos con ordenamiento configurable",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'deadline', '-target_value', 'current_value'",
+                type=openapi.TYPE_STRING,
+                enum=['deadline', '-deadline', 'target_value', '-target_value', 'current_value', '-current_value']
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Búsqueda en título y descripción",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
     def update_progress(self, request, pk=None):
@@ -464,3 +752,28 @@ def client_login(request):
             'subscription_type': client.subscription_type
         }
     })
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: UserProfileSerializer,
+        401: 'Unauthorized',
+        500: 'Internal Server Error'
+    },
+    operation_description="Obtiene la información del usuario autenticado basado en el token de sesión JWT",
+    operation_summary="Obtener información del usuario autenticado"
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    """Endpoint para obtener la información del usuario autenticado basado en el token de sesión"""
+    try:
+        # El usuario ya está autenticado gracias al decorador @permission_classes([IsAuthenticated])
+        user = request.user
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response(
+            {'error': f'Error al obtener información del usuario: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

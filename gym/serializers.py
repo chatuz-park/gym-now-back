@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import (
     Client, Exercise, Workout, WorkoutSet, Routine, 
     ClientRoutine, RoutineProgress, ProgressMetrics, Goal
@@ -64,6 +65,18 @@ class ClientSerializer(serializers.ModelSerializer):
         from .serializers import ClientRoutineDetailSerializer
         return ClientRoutineDetailSerializer(obj.client_routines.filter(is_active=True), many=True).data
 
+    def validate_email(self, value):
+        """Validar que el email sea único"""
+        if Client.objects.filter(email=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise serializers.ValidationError("Este correo electrónico ya está registrado.")
+        return value
+
+    def validate_phone(self, value):
+        """Validar que el teléfono sea único"""
+        if Client.objects.filter(phone=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise serializers.ValidationError("Este número de teléfono ya está registrado.")
+        return value
+
 class ClientRoutineSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     routine = RoutineSerializer(read_only=True)
@@ -81,6 +94,39 @@ class ClientRoutineSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientRoutine
         fields = ['id', 'client', 'client_id', 'routine', 'routine_id', 'start_date', 'end_date', 'is_active', 'assigned_days']
+
+    def validate_assigned_days(self, value):
+        """
+        Validar y convertir el formato de assigned_days
+        Acepta tanto lista de días como objeto con valores booleanos
+        """
+        if isinstance(value, dict):
+            # Convertir objeto {day: boolean} a lista de días seleccionados
+            days_mapping = {
+                'monday': 'monday',
+                'tuesday': 'tuesday', 
+                'wednesday': 'wednesday',
+                'thursday': 'thursday',
+                'friday': 'friday',
+                'saturday': 'saturday',
+                'sunday': 'sunday'
+            }
+            
+            selected_days = []
+            for day_key, is_selected in value.items():
+                if is_selected and day_key in days_mapping:
+                    selected_days.append(days_mapping[day_key])
+            
+            return selected_days
+        elif isinstance(value, list):
+            # Validar que todos los elementos sean días válidos
+            valid_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+            for day in value:
+                if day not in valid_days:
+                    raise serializers.ValidationError(f"Día inválido: {day}. Días válidos: {', '.join(valid_days)}")
+            return value
+        else:
+            raise serializers.ValidationError("assigned_days debe ser una lista de días o un objeto con valores booleanos")
 
     def validate(self, data):
         """
@@ -237,3 +283,15 @@ class RoutineCreateSerializer(serializers.ModelSerializer):
                     WorkoutSet.objects.create(workout=workout, **set_data)
         
         return instance 
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer para la información del usuario autenticado"""
+    role = serializers.CharField(source='custom_profile.role', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 
+            'date_joined', 'last_login', 'role'
+        ]
+        read_only_fields = ['id', 'date_joined', 'last_login', 'role'] 

@@ -1,9 +1,23 @@
 from django.contrib import admin
 from django.utils import timezone
 from .models import (
-    Client, Exercise, Workout, WorkoutSet, Routine, 
+    CustomUser, Client, Exercise, Workout, WorkoutSet, Routine, 
     ClientRoutine, RoutineProgress, ProgressMetrics, Goal
 )
+
+@admin.register(CustomUser)
+class CustomUserAdmin(admin.ModelAdmin):
+    list_display = ['user', 'role', 'user_email', 'user_full_name']
+    list_filter = ['role']
+    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name']
+    
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = 'Email'
+    
+    def user_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
+    user_full_name.short_description = 'Nombre Completo'
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):

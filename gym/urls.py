@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ClientViewSet, ExerciseViewSet, WorkoutViewSet, WorkoutSetViewSet,
     RoutineViewSet, ClientRoutineViewSet, RoutineProgressViewSet,
-    ProgressMetricsViewSet, GoalViewSet
+    ProgressMetricsViewSet, GoalViewSet, client_login
 )
 
 router = DefaultRouter()
@@ -19,4 +19,5 @@ router.register(r'goals', GoalViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
+    path('api/client-login/', client_login, name='client_login'),
 ] 

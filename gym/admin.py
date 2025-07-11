@@ -8,7 +8,7 @@ from .models import (
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ['name', 'email', 'age', 'subscription_type', 'join_date', 'is_active']
-    list_filter = ['subscription_type', 'join_date', 'age']
+    list_filter = ['subscription_type', 'join_date', 'birth_date']
     search_fields = ['name', 'email', 'phone']
     readonly_fields = ['join_date']
     
@@ -16,6 +16,10 @@ class ClientAdmin(admin.ModelAdmin):
         return obj.subscription_end is None or obj.subscription_end > timezone.now().date()
     is_active.boolean = True
     is_active.short_description = 'Activo'
+
+    def age(self, obj):
+        return obj.age
+    age.short_description = 'Edad'
 
 @admin.register(Exercise)
 class ExerciseAdmin(admin.ModelAdmin):

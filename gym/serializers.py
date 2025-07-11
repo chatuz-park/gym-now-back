@@ -45,10 +45,19 @@ class ClientRoutineDetailSerializer(serializers.ModelSerializer):
 
 class ClientSerializer(serializers.ModelSerializer):
     assigned_routines = serializers.SerializerMethodField()
+    username = serializers.CharField(source='user.username', read_only=True)
+    default_password = serializers.SerializerMethodField()
+    age = serializers.ReadOnlyField()
 
     class Meta:
         model = Client
         fields = '__all__'
+
+    def get_default_password(self, obj):
+        """Retorna la contraseña por defecto generada"""
+        if obj.user:
+            return obj.generate_default_password()
+        return None
 
     def get_assigned_routines(self, obj):
         """Obtener las asignaciones completas de rutinas con sus detalles"""
@@ -177,5 +186,54 @@ class WorkoutCreateSerializer(serializers.ModelSerializer):
             # Crear nuevos sets
             for set_data in sets_data:
                 WorkoutSet.objects.create(workout=instance, **set_data)
+        
+        return instance
+
+class RoutineCreateSerializer(serializers.ModelSerializer):
+    workouts = WorkoutCreateSerializer(many=True)
+
+    class Meta:
+        model = Routine
+        fields = ['name', 'description', 'frequency', 'days_per_week', 'duration', 'workouts']
+
+    def create(self, validated_data):
+        workouts_data = validated_data.pop('workouts')
+        routine = Routine.objects.create(**validated_data)
+        
+        for workout_data in workouts_data:
+            sets_data = workout_data.pop('sets')
+            workout = Workout.objects.create(**workout_data)
+            
+            # Agregar el workout a la rutina usando la relación many-to-many
+            routine.workouts.add(workout)
+            
+            for set_data in sets_data:
+                WorkoutSet.objects.create(workout=workout, **set_data)
+        
+        return routine
+
+    def update(self, instance, validated_data):
+        workouts_data = validated_data.pop('workouts', None)
+        
+        # Actualizar campos de la rutina
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Actualizar workouts si se proporcionan
+        if workouts_data is not None:
+            # Eliminar workouts existentes de la rutina
+            instance.workouts.clear()
+            
+            # Crear nuevos workouts
+            for workout_data in workouts_data:
+                sets_data = workout_data.pop('sets')
+                workout = Workout.objects.create(**workout_data)
+                
+                # Agregar el workout a la rutina
+                instance.workouts.add(workout)
+                
+                for set_data in sets_data:
+                    WorkoutSet.objects.create(workout=workout, **set_data)
         
         return instance 

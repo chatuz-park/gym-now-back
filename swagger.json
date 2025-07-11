@@ -34,6 +34,22 @@
     }
   ],
   "paths": {
+    "/client-login/": {
+      "post": {
+        "operationId": "client-login_create",
+        "description": "Endpoint para que los clientes inicien sesión con sus credenciales",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "client-login"
+        ]
+      },
+      "parameters": []
+    },
     "/client-routines/": {
       "get": {
         "operationId": "client-routines_list",
@@ -45,15 +61,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/ClientRoutine"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ClientRoutine"
+                  }
+                }
               }
             }
           }
@@ -260,15 +305,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Client"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Client"
+                  }
+                }
               }
             }
           }
@@ -295,6 +369,204 @@
             "description": "",
             "schema": {
               "$ref": "#/definitions/Client"
+            }
+          }
+        },
+        "tags": [
+          "clients"
+        ]
+      },
+      "parameters": []
+    },
+    "/clients/all_credentials/": {
+      "get": {
+        "operationId": "clients_all_credentials",
+        "description": "Obtener las credenciales de acceso de todos los clientes",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Client"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "clients"
+        ]
+      },
+      "parameters": []
+    },
+    "/clients/me/": {
+      "get": {
+        "operationId": "clients_me",
+        "description": "Obtener los datos del cliente autenticado",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Client"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "clients"
+        ]
+      },
+      "parameters": []
+    },
+    "/clients/statistics/": {
+      "get": {
+        "operationId": "clients_statistics",
+        "description": "Obtener estadísticas de los clientes",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Client"
+                  }
+                }
+              }
             }
           }
         },
@@ -378,6 +650,33 @@
         "responses": {
           "204": {
             "description": ""
+          }
+        },
+        "tags": [
+          "clients"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this client.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/clients/{id}/credentials/": {
+      "get": {
+        "operationId": "clients_credentials",
+        "description": "Obtener las credenciales de acceso de un cliente",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Client"
+            }
           }
         },
         "tags": [
@@ -493,15 +792,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Exercise"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Exercise"
+                  }
+                }
               }
             }
           }
@@ -555,15 +883,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Exercise"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Exercise"
+                  }
+                }
               }
             }
           }
@@ -592,15 +949,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Exercise"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Exercise"
+                  }
+                }
               }
             }
           }
@@ -719,15 +1105,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Goal"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Goal"
+                  }
+                }
               }
             }
           }
@@ -781,15 +1196,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Goal"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Goal"
+                  }
+                }
               }
             }
           }
@@ -818,15 +1262,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Goal"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Goal"
+                  }
+                }
               }
             }
           }
@@ -974,15 +1447,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/ProgressMetrics"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ProgressMetrics"
+                  }
+                }
               }
             }
           }
@@ -1029,15 +1531,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/ProgressMetrics"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ProgressMetrics"
+                  }
+                }
               }
             }
           }
@@ -1149,15 +1680,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/RoutineProgress"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/RoutineProgress"
+                  }
+                }
               }
             }
           }
@@ -1301,15 +1861,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Routine"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Routine"
+                  }
+                }
               }
             }
           }
@@ -1327,7 +1916,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/Routine"
+              "$ref": "#/definitions/RoutineCreate"
             }
           }
         ],
@@ -1335,7 +1924,7 @@
           "201": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/Routine"
+              "$ref": "#/definitions/RoutineCreate"
             }
           }
         },
@@ -1363,15 +1952,110 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Routine"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Routine"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "routines"
+        ]
+      },
+      "parameters": []
+    },
+    "/routines/statistics/": {
+      "get": {
+        "operationId": "routines_statistics",
+        "description": "Obtener estadísticas de las rutinas",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Routine"
+                  }
+                }
               }
             }
           }
@@ -1408,7 +2092,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/Routine"
+              "$ref": "#/definitions/RoutineCreate"
             }
           }
         ],
@@ -1416,7 +2100,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/Routine"
+              "$ref": "#/definitions/RoutineCreate"
             }
           }
         },
@@ -1433,7 +2117,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/Routine"
+              "$ref": "#/definitions/RoutineCreate"
             }
           }
         ],
@@ -1441,7 +2125,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/Routine"
+              "$ref": "#/definitions/RoutineCreate"
             }
           }
         },
@@ -1566,15 +2250,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/WorkoutSet"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/WorkoutSet"
+                  }
+                }
               }
             }
           }
@@ -1718,15 +2431,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Workout"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Workout"
+                  }
+                }
               }
             }
           }
@@ -1780,15 +2522,44 @@
             "description": "Which field to use when ordering the results.",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "required": false,
+            "type": "integer"
           }
         ],
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Workout"
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Workout"
+                  }
+                }
               }
             }
           }
@@ -1918,6 +2689,137 @@
     }
   },
   "definitions": {
+    "Client": {
+      "required": [
+        "name",
+        "email",
+        "phone",
+        "weight",
+        "height",
+        "join_date"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "assigned_routines": {
+          "title": "Assigned routines",
+          "type": "string",
+          "readOnly": true
+        },
+        "username": {
+          "title": "Username",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1
+        },
+        "default_password": {
+          "title": "Default password",
+          "type": "string",
+          "readOnly": true
+        },
+        "age": {
+          "title": "Age",
+          "type": "string",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 1
+        },
+        "email": {
+          "title": "Email",
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "minLength": 1
+        },
+        "phone": {
+          "title": "Phone",
+          "type": "string",
+          "maxLength": 30,
+          "minLength": 1
+        },
+        "birth_date": {
+          "title": "Birth date",
+          "type": "string",
+          "format": "date"
+        },
+        "weight": {
+          "title": "Weight",
+          "type": "number"
+        },
+        "height": {
+          "title": "Height",
+          "type": "number"
+        },
+        "goals": {
+          "title": "Goals",
+          "type": "object"
+        },
+        "join_date": {
+          "title": "Join date",
+          "type": "string",
+          "format": "date"
+        },
+        "profile_image": {
+          "title": "Profile image",
+          "type": "string",
+          "format": "uri",
+          "maxLength": 200,
+          "x-nullable": true
+        },
+        "subscription_type": {
+          "title": "Subscription type",
+          "type": "string",
+          "enum": [
+            "standard",
+            "premium",
+            "personalized"
+          ],
+          "x-nullable": true
+        },
+        "subscription_start": {
+          "title": "Subscription start",
+          "type": "string",
+          "format": "date",
+          "x-nullable": true
+        },
+        "subscription_end": {
+          "title": "Subscription end",
+          "type": "string",
+          "format": "date",
+          "x-nullable": true
+        },
+        "notes": {
+          "title": "Notes",
+          "type": "string",
+          "x-nullable": true
+        },
+        "emergency_contact": {
+          "title": "Emergency contact",
+          "type": "string",
+          "maxLength": 100,
+          "x-nullable": true
+        },
+        "medical_conditions": {
+          "title": "Medical conditions",
+          "type": "string",
+          "maxLength": 255,
+          "x-nullable": true
+        },
+        "user": {
+          "title": "User",
+          "type": "integer",
+          "x-nullable": true
+        }
+      }
+    },
     "Exercise": {
       "required": [
         "name",
@@ -2144,120 +3046,6 @@
         }
       }
     },
-    "Client": {
-      "required": [
-        "name",
-        "email",
-        "phone",
-        "age",
-        "weight",
-        "height",
-        "join_date"
-      ],
-      "type": "object",
-      "properties": {
-        "id": {
-          "title": "ID",
-          "type": "integer",
-          "readOnly": true
-        },
-        "assigned_routines": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Routine"
-          },
-          "readOnly": true
-        },
-        "name": {
-          "title": "Name",
-          "type": "string",
-          "maxLength": 100,
-          "minLength": 1
-        },
-        "email": {
-          "title": "Email",
-          "type": "string",
-          "format": "email",
-          "maxLength": 254,
-          "minLength": 1
-        },
-        "phone": {
-          "title": "Phone",
-          "type": "string",
-          "maxLength": 30,
-          "minLength": 1
-        },
-        "age": {
-          "title": "Age",
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0
-        },
-        "weight": {
-          "title": "Weight",
-          "type": "number"
-        },
-        "height": {
-          "title": "Height",
-          "type": "number"
-        },
-        "goals": {
-          "title": "Goals",
-          "type": "object"
-        },
-        "join_date": {
-          "title": "Join date",
-          "type": "string",
-          "format": "date"
-        },
-        "profile_image": {
-          "title": "Profile image",
-          "type": "string",
-          "format": "uri",
-          "maxLength": 200,
-          "x-nullable": true
-        },
-        "subscription_type": {
-          "title": "Subscription type",
-          "type": "string",
-          "enum": [
-            "standard",
-            "premium",
-            "personalized"
-          ],
-          "x-nullable": true
-        },
-        "subscription_start": {
-          "title": "Subscription start",
-          "type": "string",
-          "format": "date",
-          "x-nullable": true
-        },
-        "subscription_end": {
-          "title": "Subscription end",
-          "type": "string",
-          "format": "date",
-          "x-nullable": true
-        },
-        "notes": {
-          "title": "Notes",
-          "type": "string",
-          "x-nullable": true
-        },
-        "emergency_contact": {
-          "title": "Emergency contact",
-          "type": "string",
-          "maxLength": 100,
-          "x-nullable": true
-        },
-        "medical_conditions": {
-          "title": "Medical conditions",
-          "type": "string",
-          "maxLength": 255,
-          "x-nullable": true
-        }
-      }
-    },
     "ClientRoutine": {
       "required": [
         "client_id",
@@ -2474,44 +3262,6 @@
         }
       }
     },
-    "TokenObtainPair": {
-      "required": [
-        "username",
-        "password"
-      ],
-      "type": "object",
-      "properties": {
-        "username": {
-          "title": "Username",
-          "type": "string",
-          "minLength": 1
-        },
-        "password": {
-          "title": "Password",
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "TokenRefresh": {
-      "required": [
-        "refresh"
-      ],
-      "type": "object",
-      "properties": {
-        "refresh": {
-          "title": "Refresh",
-          "type": "string",
-          "minLength": 1
-        },
-        "access": {
-          "title": "Access",
-          "type": "string",
-          "readOnly": true,
-          "minLength": 1
-        }
-      }
-    },
     "WorkoutSetCreate": {
       "required": [
         "exercise",
@@ -2599,6 +3349,96 @@
           "items": {
             "$ref": "#/definitions/WorkoutSetCreate"
           }
+        }
+      }
+    },
+    "RoutineCreate": {
+      "required": [
+        "name",
+        "description",
+        "frequency",
+        "days_per_week",
+        "duration",
+        "workouts"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 1
+        },
+        "description": {
+          "title": "Description",
+          "type": "string",
+          "minLength": 1
+        },
+        "frequency": {
+          "title": "Frequency",
+          "type": "string",
+          "enum": [
+            "daily",
+            "weekly",
+            "custom"
+          ]
+        },
+        "days_per_week": {
+          "title": "Days per week",
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 0
+        },
+        "duration": {
+          "title": "Duration",
+          "description": "Duration in weeks",
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 0
+        },
+        "workouts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkoutCreate"
+          }
+        }
+      }
+    },
+    "TokenObtainPair": {
+      "required": [
+        "username",
+        "password"
+      ],
+      "type": "object",
+      "properties": {
+        "username": {
+          "title": "Username",
+          "type": "string",
+          "minLength": 1
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "TokenRefresh": {
+      "required": [
+        "refresh"
+      ],
+      "type": "object",
+      "properties": {
+        "refresh": {
+          "title": "Refresh",
+          "type": "string",
+          "minLength": 1
+        },
+        "access": {
+          "title": "Access",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1
         }
       }
     }

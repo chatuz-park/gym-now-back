@@ -33,6 +33,9 @@ DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') if os.getenv('ALLOWED_HOSTS') else []
 
+# CSRF trusted origins (comma-separated, e.g. https://example.com,https://api.example.com)
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else []
+
 
 # Application definition
 
@@ -64,14 +67,19 @@ MIDDLEWARE = [
 ]
 
 # Configuración de CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite default
-    "http://localhost:3000",  # React default
-    "http://localhost:8080",  # Vue default
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8080",
-]
+# Permite configurar orígenes vía env (coma-separado). Si no hay env, usa defaults locales.
+_CORS_ENV = os.getenv('CORS_ALLOWED_ORIGINS')
+if _CORS_ENV:
+    CORS_ALLOWED_ORIGINS = [o for o in _CORS_ENV.split(',') if o]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",  # Vite default
+        "http://localhost:3000",  # React default
+        "http://localhost:8080",  # Vue default
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080",
+    ]
 
 # Permitir credenciales (cookies, headers de autorización)
 CORS_ALLOW_CREDENTIALS = True

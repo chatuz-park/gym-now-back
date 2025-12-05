@@ -56,6 +56,34 @@
         "description": "Lista de rutinas de clientes con ordenamiento configurable",
         "parameters": [
           {
+            "name": "client",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "routine",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "ordering",
             "in": "query",
             "description": "Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'start_date', '-end_date'",
@@ -501,9 +529,128 @@
         "description": "Lista de clientes con ordenamiento configurable",
         "parameters": [
           {
+            "name": "subscription_type",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_type__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "phone__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "emergency_contact__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "medical_conditions__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "Búsqueda en nombre, email y teléfono",
+            "description": "Búsqueda en nombre, email, teléfono y contacto de emergencia",
+            "type": "string"
+          },
+          {
+            "name": "min_age",
+            "in": "query",
+            "description": "Edad mínima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_age",
+            "in": "query",
+            "description": "Edad máxima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "age_range",
+            "in": "query",
+            "description": "Rango de edad",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "weight_range",
+            "in": "query",
+            "description": "Rango de peso",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "height_range",
+            "in": "query",
+            "description": "Rango de altura",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "join_date_range",
+            "in": "query",
+            "description": "Rango de fecha de registro",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "birth_date_range",
+            "in": "query",
+            "description": "Rango de fecha de nacimiento",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_status",
+            "in": "query",
+            "description": "Estado de suscripción",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_goals",
+            "in": "query",
+            "description": "Tiene objetivos",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_routines",
+            "in": "query",
+            "description": "Tiene rutinas asignadas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "routine_count",
+            "in": "query",
+            "description": "Número de rutinas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Filtro general",
+            "required": false,
             "type": "string"
           },
           {
@@ -601,9 +748,128 @@
         "description": "Obtener las credenciales de acceso de todos los clientes",
         "parameters": [
           {
+            "name": "subscription_type",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_type__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "phone__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "emergency_contact__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "medical_conditions__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_age",
+            "in": "query",
+            "description": "Edad mínima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_age",
+            "in": "query",
+            "description": "Edad máxima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "age_range",
+            "in": "query",
+            "description": "Rango de edad",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "weight_range",
+            "in": "query",
+            "description": "Rango de peso",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "height_range",
+            "in": "query",
+            "description": "Rango de altura",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "join_date_range",
+            "in": "query",
+            "description": "Rango de fecha de registro",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "birth_date_range",
+            "in": "query",
+            "description": "Rango de fecha de nacimiento",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_status",
+            "in": "query",
+            "description": "Estado de suscripción",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_goals",
+            "in": "query",
+            "description": "Tiene objetivos",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_routines",
+            "in": "query",
+            "description": "Tiene rutinas asignadas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "routine_count",
+            "in": "query",
+            "description": "Número de rutinas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Filtro general",
             "required": false,
             "type": "string"
           },
@@ -667,9 +933,128 @@
         "description": "Obtener los datos del cliente autenticado",
         "parameters": [
           {
+            "name": "subscription_type",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_type__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "phone__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "emergency_contact__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "medical_conditions__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_age",
+            "in": "query",
+            "description": "Edad mínima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_age",
+            "in": "query",
+            "description": "Edad máxima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "age_range",
+            "in": "query",
+            "description": "Rango de edad",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "weight_range",
+            "in": "query",
+            "description": "Rango de peso",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "height_range",
+            "in": "query",
+            "description": "Rango de altura",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "join_date_range",
+            "in": "query",
+            "description": "Rango de fecha de registro",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "birth_date_range",
+            "in": "query",
+            "description": "Rango de fecha de nacimiento",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_status",
+            "in": "query",
+            "description": "Estado de suscripción",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_goals",
+            "in": "query",
+            "description": "Tiene objetivos",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_routines",
+            "in": "query",
+            "description": "Tiene rutinas asignadas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "routine_count",
+            "in": "query",
+            "description": "Número de rutinas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Filtro general",
             "required": false,
             "type": "string"
           },
@@ -733,9 +1118,128 @@
         "description": "Obtener estadísticas de los clientes",
         "parameters": [
           {
+            "name": "subscription_type",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_type__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "phone__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "emergency_contact__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "medical_conditions__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_age",
+            "in": "query",
+            "description": "Edad mínima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_age",
+            "in": "query",
+            "description": "Edad máxima",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "age_range",
+            "in": "query",
+            "description": "Rango de edad",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "weight_range",
+            "in": "query",
+            "description": "Rango de peso",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "height_range",
+            "in": "query",
+            "description": "Rango de altura",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "join_date_range",
+            "in": "query",
+            "description": "Rango de fecha de registro",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "birth_date_range",
+            "in": "query",
+            "description": "Rango de fecha de nacimiento",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscription_status",
+            "in": "query",
+            "description": "Estado de suscripción",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_goals",
+            "in": "query",
+            "description": "Tiene objetivos",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "has_routines",
+            "in": "query",
+            "description": "Tiene rutinas asignadas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "routine_count",
+            "in": "query",
+            "description": "Número de rutinas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Filtro general",
             "required": false,
             "type": "string"
           },
@@ -991,15 +1495,111 @@
         }
       ]
     },
+    "/clients/{id}/upload_profile_image/": {
+      "post": {
+        "operationId": "clients_upload_profile_image",
+        "description": "Subir imagen de perfil del cliente a S3. El ID del cliente va en la URL.",
+        "parameters": [
+          {
+            "name": "profile_image",
+            "in": "formData",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Imagen subida exitosamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "profile_image": {
+                  "description": "URL de la imagen",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "Mensaje de confirmación",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error en la solicitud"
+          },
+          "404": {
+            "description": "Cliente no encontrado"
+          }
+        },
+        "consumes": [
+          "multipart/form-data",
+          "application/x-www-form-urlencoded"
+        ],
+        "tags": [
+          "clients"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this client.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
     "/exercises/": {
       "get": {
         "operationId": "exercises_list",
         "description": "Lista de ejercicios con ordenamiento configurable",
         "parameters": [
           {
+            "name": "difficulty",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "difficulty__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "description__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
             "description": "Búsqueda en nombre y descripción",
+            "type": "string"
+          },
+          {
+            "name": "muscle_groups",
+            "in": "query",
+            "description": "Grupos musculares",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "equipment",
+            "in": "query",
+            "description": "Equipamiento",
+            "required": false,
             "type": "string"
           },
           {
@@ -1091,9 +1691,51 @@
         "description": "Obtener ejercicios por nivel de dificultad",
         "parameters": [
           {
+            "name": "difficulty",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "difficulty__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "description__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "muscle_groups",
+            "in": "query",
+            "description": "Grupos musculares",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "equipment",
+            "in": "query",
+            "description": "Equipamiento",
             "required": false,
             "type": "string"
           },
@@ -1157,9 +1799,51 @@
         "description": "Obtener ejercicios por grupo muscular",
         "parameters": [
           {
+            "name": "difficulty",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "difficulty__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "description__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "muscle_groups",
+            "in": "query",
+            "description": "Grupos musculares",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "equipment",
+            "in": "query",
+            "description": "Equipamiento",
             "required": false,
             "type": "string"
           },
@@ -1313,6 +1997,55 @@
         "description": "Lista de objetivos con ordenamiento configurable",
         "parameters": [
           {
+            "name": "client",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "is_completed",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
             "description": "Búsqueda en título y descripción",
@@ -1409,9 +2142,58 @@
         "description": "Obtener objetivos completados",
         "parameters": [
           {
+            "name": "client",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "is_completed",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
             "required": false,
             "type": "string"
           },
@@ -1475,9 +2257,58 @@
         "description": "Obtener objetivos pendientes",
         "parameters": [
           {
+            "name": "client",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "is_completed",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "deadline__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
             "required": false,
             "type": "string"
           },
@@ -1667,6 +2498,20 @@
         "description": "Lista de métricas de progreso con ordenamiento configurable",
         "parameters": [
           {
+            "name": "client",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "ordering",
             "in": "query",
             "description": "Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'date', '-weight', 'body_fat'",
@@ -1758,6 +2603,20 @@
         "operationId": "progress-metrics_client_progress",
         "description": "Obtener el progreso de un cliente específico",
         "parameters": [
+          {
+            "name": "client",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
           {
             "name": "ordering",
             "in": "query",
@@ -1907,6 +2766,27 @@
         "operationId": "routine-progress_list",
         "description": "Lista de progreso de rutinas con ordenamiento configurable",
         "parameters": [
+          {
+            "name": "client_routine",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workout",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "completed_at",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
           {
             "name": "ordering",
             "in": "query",
@@ -2086,9 +2966,128 @@
         "description": "Lista de rutinas con ordenamiento configurable",
         "parameters": [
           {
+            "name": "frequency",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "frequency__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
             "description": "Búsqueda en nombre y descripción",
+            "type": "string"
+          },
+          {
+            "name": "duration_range",
+            "in": "query",
+            "description": "Rango de duración",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_range",
+            "in": "query",
+            "description": "Rango de días por semana",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workout_count",
+            "in": "query",
+            "description": "Número de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_workouts",
+            "in": "query",
+            "description": "Mínimo de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_workouts",
+            "in": "query",
+            "description": "Máximo de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_clients",
+            "in": "query",
+            "description": "Mínimo de clientes",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_clients",
+            "in": "query",
+            "description": "Máximo de clientes",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "estimated_difficulty",
+            "in": "query",
+            "description": "Dificultad estimada",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workout_categories",
+            "in": "query",
+            "description": "Categorías de workouts",
+            "required": false,
             "type": "string"
           },
           {
@@ -2184,9 +3183,128 @@
         "description": "Obtener rutinas por frecuencia",
         "parameters": [
           {
+            "name": "frequency",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "frequency__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration_range",
+            "in": "query",
+            "description": "Rango de duración",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_range",
+            "in": "query",
+            "description": "Rango de días por semana",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workout_count",
+            "in": "query",
+            "description": "Número de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_workouts",
+            "in": "query",
+            "description": "Mínimo de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_workouts",
+            "in": "query",
+            "description": "Máximo de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_clients",
+            "in": "query",
+            "description": "Mínimo de clientes",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_clients",
+            "in": "query",
+            "description": "Máximo de clientes",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "estimated_difficulty",
+            "in": "query",
+            "description": "Dificultad estimada",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workout_categories",
+            "in": "query",
+            "description": "Categorías de workouts",
             "required": false,
             "type": "string"
           },
@@ -2250,9 +3368,128 @@
         "description": "Obtener estadísticas de las rutinas",
         "parameters": [
           {
+            "name": "frequency",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "frequency__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_per_week__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration__gte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration__lte",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "duration_range",
+            "in": "query",
+            "description": "Rango de duración",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "days_range",
+            "in": "query",
+            "description": "Rango de días por semana",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workout_count",
+            "in": "query",
+            "description": "Número de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_workouts",
+            "in": "query",
+            "description": "Mínimo de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_workouts",
+            "in": "query",
+            "description": "Máximo de workouts",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "min_clients",
+            "in": "query",
+            "description": "Mínimo de clientes",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "max_clients",
+            "in": "query",
+            "description": "Máximo de clientes",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "estimated_difficulty",
+            "in": "query",
+            "description": "Dificultad estimada",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workout_categories",
+            "in": "query",
+            "description": "Categorías de workouts",
             "required": false,
             "type": "string"
           },
@@ -2515,6 +3752,27 @@
         "description": "Lista de workout sets con ordenamiento configurable",
         "parameters": [
           {
+            "name": "workout",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "exercise",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "completed",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "ordering",
             "in": "query",
             "description": "Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'reps', '-weight', 'rest_time'",
@@ -2695,9 +3953,65 @@
         "description": "Lista de workouts con ordenamiento configurable",
         "parameters": [
           {
+            "name": "difficulty",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "difficulty__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "description__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
             "description": "Búsqueda en nombre y descripción",
+            "type": "string"
+          },
+          {
+            "name": "estimated_duration_range",
+            "in": "query",
+            "description": "Rango de duración",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "exercise_count",
+            "in": "query",
+            "description": "Número de ejercicios",
+            "required": false,
             "type": "string"
           },
           {
@@ -2791,9 +4105,65 @@
         "description": "Obtener workouts por categoría",
         "parameters": [
           {
+            "name": "difficulty",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "difficulty__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category__in",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "name__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "description__icontains",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "search",
             "in": "query",
-            "description": "A search term.",
+            "description": "Buscar",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "estimated_duration_range",
+            "in": "query",
+            "description": "Rango de duración",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "exercise_count",
+            "in": "query",
+            "description": "Número de ejercicios",
             "required": false,
             "type": "string"
           },

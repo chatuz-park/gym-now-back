@@ -294,4 +294,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name', 
             'date_joined', 'last_login', 'role'
         ]
-        read_only_fields = ['id', 'date_joined', 'last_login', 'role'] 
+        read_only_fields = ['id', 'date_joined', 'last_login', 'role']
+
+class ProfileImageUploadSerializer(serializers.Serializer):
+    """Serializer para subida de imagen de perfil"""
+    profile_image = serializers.ImageField() 

@@ -4,12 +4,13 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .filters import ClientFilter, RoutineFilter, ExerciseFilter, WorkoutFilter
+from .filters import ClientFilter, RoutineFilter, ExerciseFilter, WorkoutFilter, GoalFilter
 from .models import (
     Client, Exercise, Workout, WorkoutSet, Routine, 
     ClientRoutine, RoutineProgress, ProgressMetrics, Goal
@@ -18,17 +19,17 @@ from .serializers import (
     ClientSerializer, ExerciseSerializer, WorkoutSerializer, WorkoutSetSerializer,
     RoutineSerializer, ClientRoutineSerializer, RoutineProgressSerializer,
     ProgressMetricsSerializer, GoalSerializer, WorkoutCreateSerializer, RoutineCreateSerializer,
-    UserProfileSerializer
+    UserProfileSerializer, ProfileImageUploadSerializer
 )
+from .services import upload_file_to_s3, delete_file_from_s3
 
 # Create your views here.
 
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ClientFilter
-    search_fields = ['name', 'email', 'phone']
     ordering_fields = ['name', 'join_date', 'birth_date', 'weight', 'height']
     ordering = ['-join_date']  # Más reciente primero
 
@@ -45,7 +46,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             openapi.Parameter(
                 'search',
                 openapi.IN_QUERY,
-                description="Búsqueda en nombre, email y teléfono",
+                description="Búsqueda en nombre, email, teléfono y contacto de emergencia",
                 type=openapi.TYPE_STRING
             ),
             openapi.Parameter(
@@ -182,12 +183,73 @@ class ClientViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    @swagger_auto_schema(
+        method='post',
+        operation_description="Subir imagen de perfil del cliente a S3. El ID del cliente va en la URL.",
+        request_body=ProfileImageUploadSerializer,
+        responses={
+            200: openapi.Response(
+                description="Imagen subida exitosamente",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'profile_image': openapi.Schema(type=openapi.TYPE_STRING, description='URL de la imagen'),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de confirmación')
+                    }
+                )
+            ),
+            400: "Error en la solicitud",
+            404: "Cliente no encontrado"
+        }
+    )
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_profile_image(self, request, pk=None):
+        """Subir imagen de perfil del cliente a S3"""
+        client = self.get_object()
+        
+        if 'profile_image' not in request.FILES:
+            return Response(
+                {'error': 'Se requiere el archivo profile_image'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        file = request.FILES['profile_image']
+        
+        # Validar tipo de archivo
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+        if file.content_type not in allowed_types:
+            return Response(
+                {'error': 'Tipo de archivo no permitido. Use JPG, PNG, GIF o WebP'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Eliminar imagen anterior si existe
+        if client.profile_image:
+            delete_file_from_s3(client.profile_image)
+        
+        # Subir nueva imagen
+        file_url = upload_file_to_s3(file, folder="profiles")
+        
+        if not file_url:
+            return Response(
+                {'error': 'Error al subir la imagen'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Actualizar cliente
+        client.profile_image = file_url
+        client.save(update_fields=['profile_image'])
+        
+        return Response({
+            'profile_image': file_url,
+            'message': 'Imagen de perfil actualizada exitosamente'
+        })
+
 class ExerciseViewSet(viewsets.ModelViewSet):
     queryset = Exercise.objects.all()
     serializer_class = ExerciseSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ExerciseFilter
-    search_fields = ['name', 'description']
     ordering_fields = ['name', 'difficulty']
     ordering = ['name']
 
@@ -236,9 +298,8 @@ class ExerciseViewSet(viewsets.ModelViewSet):
 
 class WorkoutViewSet(viewsets.ModelViewSet):
     queryset = Workout.objects.all()
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = WorkoutFilter
-    search_fields = ['name', 'description']
     ordering_fields = ['name', 'difficulty', 'estimated_duration']
     ordering = ['name']
 
@@ -322,9 +383,8 @@ class WorkoutSetViewSet(viewsets.ModelViewSet):
 class RoutineViewSet(viewsets.ModelViewSet):
     queryset = Routine.objects.all()
     serializer_class = RoutineSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = RoutineFilter
-    search_fields = ['name', 'description']
     ordering_fields = ['name', 'duration', 'days_per_week', 'frequency']
     ordering = ['name']
 
@@ -633,9 +693,8 @@ class ProgressMetricsViewSet(viewsets.ModelViewSet):
 class GoalViewSet(viewsets.ModelViewSet):
     queryset = Goal.objects.all()
     serializer_class = GoalSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['client', 'category', 'is_completed', 'deadline']
-    search_fields = ['title', 'description']
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = GoalFilter
     ordering_fields = ['deadline', 'target_value', 'current_value']
     ordering = ['deadline']  # Más urgente primero (deadline ascendente)
 

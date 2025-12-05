@@ -2,7 +2,7 @@ import django_filters
 from django_filters import rest_framework as filters
 from django.db.models import Q, Count
 from datetime import date
-from .models import Client, Routine, Exercise, Workout
+from .models import Client, Routine, Exercise, Workout, Goal
 
 
 class ClientFilter(filters.FilterSet):
@@ -334,4 +334,24 @@ class WorkoutFilter(filters.FilterSet):
         """Filtro por número de ejercicios"""
         return queryset.annotate(
             exercise_count=Count('sets__exercise', distinct=True)
-        ).filter(exercise_count=value) 
+        ).filter(exercise_count=value)
+
+
+class GoalFilter(filters.FilterSet):
+    search = django_filters.CharFilter(method='search_filter', label='Buscar')
+    
+    class Meta:
+        model = Goal
+        fields = {
+            'client': ['exact'],
+            'category': ['exact', 'in'],
+            'is_completed': ['exact'],
+            'deadline': ['exact', 'gte', 'lte'],
+        }
+
+    def search_filter(self, queryset, name, value):
+        """Búsqueda en múltiples campos"""
+        return queryset.filter(
+            Q(title__icontains=value) |
+            Q(description__icontains=value)
+        ) 

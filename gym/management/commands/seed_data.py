@@ -231,7 +231,7 @@ class Command(BaseCommand):
                 'name': 'María González',
                 'email': 'maria.gonzalez@email.com',
                 'phone': '+34 612 345 678',
-                'age': 28,
+                'birth_date': date(1996, 3, 15),
                 'weight': 65,
                 'height': 165,
                 'goals': ['Perder peso', 'Tonificar músculos', 'Mejorar resistencia'],
@@ -249,7 +249,7 @@ class Command(BaseCommand):
                 'name': 'Carlos Rodríguez',
                 'email': 'carlos.rodriguez@email.com',
                 'phone': '+34 623 456 789',
-                'age': 32,
+                'birth_date': date(1992, 7, 22),
                 'weight': 80,
                 'height': 180,
                 'goals': ['Ganar masa muscular', 'Aumentar fuerza', 'Mejorar composición corporal'],
@@ -267,7 +267,7 @@ class Command(BaseCommand):
                 'name': 'Ana Martínez',
                 'email': 'ana.martinez@email.com',
                 'phone': '+34 634 567 890',
-                'age': 25,
+                'birth_date': date(1999, 11, 8),
                 'weight': 58,
                 'height': 160,
                 'goals': ['Mantener peso', 'Mejorar flexibilidad', 'Reducir estrés'],
@@ -287,7 +287,17 @@ class Command(BaseCommand):
         for data in clients_data:
             assigned_routines = data.pop('assigned_routines')
             client = Client.objects.create(**data)
-            client.assigned_routines.set(assigned_routines)
+            
+            # Create ClientRoutine relationships
+            for routine in assigned_routines:
+                ClientRoutine.objects.create(
+                    client=client,
+                    routine=routine,
+                    start_date=client.join_date,
+                    is_active=True,
+                    assigned_days=routine.scheduled_days
+                )
+            
             clients.append(client)
         
         return clients

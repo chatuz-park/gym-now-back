@@ -13,6 +13,7 @@ python-dotenv = "*"
 django-filter = "*"
 requests = "*"
 django-cors-headers = "*"
+boto3 = "*"
 
 [dev-packages]
 

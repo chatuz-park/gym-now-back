@@ -26,6 +26,47 @@ sudo ./svc.sh install
 sudo ./svc.sh start
 ```
 
+## Configuración de Variables de Entorno
+
+### Método 1: GitHub Secrets (Recomendado)
+
+Configura estos secrets en GitHub (`Settings > Secrets and variables > Actions`):
+
+#### Secrets requeridos:
+- `SECRET_KEY`: Clave secreta de Django
+- `ALLOWED_HOSTS`: Dominios permitidos (ej: `mydomain.com,192.168.1.100`)
+- `DB_NAME`: Nombre de la base de datos
+- `DB_USER`: Usuario de PostgreSQL
+- `DB_PASSWORD`: Contraseña de PostgreSQL
+- `DB_HOST`: Host de la base de datos
+- `DB_PORT`: Puerto de PostgreSQL (normalmente 5432)
+- `AWS_ACCESS_KEY_ID`: AWS Access Key
+- `AWS_SECRET_ACCESS_KEY`: AWS Secret Key
+- `AWS_S3_REGION_NAME`: Región de AWS
+- `AWS_STORAGE_BUCKET_NAME`: Nombre del bucket S3
+- `AWS_S3_CUSTOM_DOMAIN`: Dominio personalizado de S3
+
+### Método 2: Archivo .env en servidor
+
+1. Copia `.env.production` al servidor:
+```bash
+scp .env.production user@server:/path/to/gym-now-back/.env
+```
+
+2. Edita las variables en el servidor:
+```bash
+nano /path/to/gym-now-back/.env
+```
+
+### Método 3: Variables de entorno del sistema
+
+```bash
+# En el servidor, agregar a ~/.bashrc o /etc/environment
+export SECRET_KEY="your-secret-key"
+export DB_PASSWORD="your-db-password"
+# etc...
+```
+
 ## Secrets Requeridos
 
 Configura estos secrets en tu repositorio (`Settings > Secrets and variables > Actions`):

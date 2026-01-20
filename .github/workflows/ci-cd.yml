@@ -38,26 +38,20 @@ jobs:
     - name: Install dependencies
       run: pipenv install --dev
     
+    - name: Create .env file
+      run: |
+        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > .env
+        echo "DEBUG=False" >> .env
+        echo "DB_NAME=test_gymnow_db" >> .env
+        echo "DB_USER=postgres" >> .env
+        echo "DB_PASSWORD=postgres" >> .env
+        echo "DB_HOST=localhost" >> .env
+        echo "DB_PORT=5432" >> .env
+    
     - name: Run migrations
-      env:
-        DB_NAME: test_gymnow_db
-        DB_USER: postgres
-        DB_PASSWORD: postgres
-        DB_HOST: localhost
-        DB_PORT: 5432
-        SECRET_KEY: test-secret-key
-        DEBUG: True
       run: pipenv run python manage.py migrate
     
     - name: Run tests
-      env:
-        DB_NAME: test_gymnow_db
-        DB_USER: postgres
-        DB_PASSWORD: postgres
-        DB_HOST: localhost
-        DB_PORT: 5432
-        SECRET_KEY: test-secret-key
-        DEBUG: True
       run: pipenv run python manage.py test
 
   deploy:
@@ -74,6 +68,27 @@ jobs:
       run: |
         cd $DEPLOY_PATH
         git pull origin main
+        
+        # Create production .env
+        cat > .env << EOF
+        SECRET_KEY=${{ secrets.SECRET_KEY }}
+        DEBUG=False
+        ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+        DB_NAME=${{ secrets.DB_NAME }}
+        DB_USER=${{ secrets.DB_USER }}
+        DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+        DB_HOST=${{ secrets.DB_HOST }}
+        DB_PORT=${{ secrets.DB_PORT }}
+        JWT_ACCESS_TOKEN_LIFETIME=60
+        JWT_REFRESH_TOKEN_LIFETIME=1440
+        AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}
+        AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+        AWS_S3_CUSTOM_DOMAIN=${{ secrets.AWS_S3_CUSTOM_DOMAIN }}
+        AWS_DEFAULT_ACL=private
+        EOF
+        
         docker-compose down
         docker-compose up -d --build
         docker-compose exec -T web python manage.py migrate

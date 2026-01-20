@@ -1,56 +1,72 @@
-name: Docker Compose Integration Test
+name: GymNow API CI/CD
 
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  integration-test:
-    runs-on: self-hosted
+  build-and-test:
+    name: Build, Run & Test
+    runs-on: self-hosted  # Tu runner configurado
 
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      # 1. Limpieza Preventiva
-      # En self-hosted, a veces quedan contenedores "zombis" de ejecuciones fallidas.
-      # Esto asegura que los puertos 8080 no estén ocupados antes de empezar.
-      - name: Limpiar entorno previo
-        run: docker compose down --remove-orphans || true
+      # 1. Crear archivo .env dinámicamente
+      # Docker Compose necesita este archivo para arrancar
+      - name: Generar .env file
+        run: |
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "DEBUG=True" >> .env
+          echo "ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0" >> .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_HOST=db" >> .env  # Importante: nombre del servicio en docker-compose
+          echo "DB_PORT=5432" >> .env
+          echo "JWT_ACCESS_TOKEN_LIFETIME=60" >> .env
+          echo "JWT_REFRESH_TOKEN_LIFETIME=1440" >> .env
 
-      # 2. Levantar servicios
-      # Usamos '-d' (detach) para que corran en segundo plano y el pipeline continúe
-      # '--build' asegura que se reconstruya la imagen con los cambios recientes
-      - name: Levantar Docker Compose
+      # 2. Limpieza preventiva
+      # Asegura que no haya contenedores viejos ocupando puertos
+      - name: Limpiar entorno previo
+        run: docker compose down -v --remove-orphans || true
+
+      # 3. Construir y Levantar
+      - name: Build y Levantar Servicios
         run: docker compose up -d --build
 
-      # 3. Esperar a que los servicios estén listos
-      # A veces la DB tarda unos segundos en arrancar. Un sleep simple suele bastar para demos,
-      # pero para producción es mejor usar scripts de "wait-for-it".
-      - name: Esperar inicialización
+      # 4. Esperar a la base de datos
+      # A veces Postgres tarda unos segundos en aceptar conexiones
+      - name: Esperar a DB
         run: sleep 10
 
-      # 4. Ejecutar pruebas
-      # Opción A: Ejecutar un comando DENTRO del contenedor de la app
-      # Esto es útil si tus tests unitarios/integración viven dentro del código de la app.
-      - name: Correr tests dentro del contenedor
-        run: docker compose exec -T app npm test
-        # Nota: '-T' es necesario para evitar el error "the input device is not a TTY"
+      # 5. Ejecutar Migraciones (Paso 5 del README)
+      - name: Aplicar Migraciones
+        run: docker compose exec -T api python manage.py migrate
 
-      # Opción B: Probar desde fuera (Blackbox testing)
-      # Útil para verificar que el puerto responde.
-      - name: Verificar respuesta HTTP
-        run: curl --fail http://localhost:8080 || exit 1
+      # 6. Poblar datos iniciales (Paso 6 del README)
+      # Esto verifica que el seeder funcione correctamente
+      - name: Seed Data
+        run: docker compose exec -T api python manage.py seed_data
 
-      # 5. Logs (Solo si falla)
-      # Si algo sale mal, queremos ver qué pasó antes de destruir todo.
-      - name: Mostrar logs si hubo error
-        if: failure()
-        run: docker compose logs
+      # 7. Verificar que el servidor responde (Smoke Test)
+      # Hacemos una petición al Swagger para ver si devuelve 200 OK
+      - name: Verificar Swagger UI
+        run: |
+          sleep 5
+          curl --fail http://localhost:8000/swagger/ || exit 1
+          echo "¡El API se levantó correctamente y la documentación está accesible!"
 
-      # 6. Limpieza Final (CRÍTICO)
-      # 'always()' asegura que esto corra aunque los tests fallen.
-      # Si no haces esto, el puerto 8080 quedará ocupado y el próximo push fallará.
-      - name: Apagar y limpiar
-        if: always()
-        run: docker compose down --rmi local --volumes
+      # 8. Ejecutar Tests (Opcional pero recomendado)
+      # docker compose exec -T api python manage.py test
+
+      # 9. Limpieza Final
+      # Si quieres que el API siga corriendo en tu servidor después del pipeline,
+      # elimina o comenta este paso. Si es solo para probar (CI), déjalo.
+      # - name: Apagar servicios (Cleanup)
+      #   if: always()
+      #   run: docker compose down -v

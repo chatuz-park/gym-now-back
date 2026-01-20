@@ -1,91 +1,56 @@
-name: CI/CD Pipeline
+name: Docker Compose Integration Test
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
-  test:
+  integration-test:
     runs-on: self-hosted
-    
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_gymnow_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install pipenv
-      run: pip install pipenv
-    
-    - name: Install dependencies
-      run: pipenv install --dev
-    
-    - name: Create .env file
-      run: |
-        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > .env
-        echo "DEBUG=False" >> .env
-        echo "DB_NAME=test_gymnow_db" >> .env
-        echo "DB_USER=postgres" >> .env
-        echo "DB_PASSWORD=postgres" >> .env
-        echo "DB_HOST=localhost" >> .env
-        echo "DB_PORT=5432" >> .env
-    
-    - name: Run migrations
-      run: pipenv run python manage.py migrate
+      - name: Checkout del código
+        uses: actions/checkout@v4
 
-  deploy:
-    runs-on: self-hosted
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to production
-      env:
-        DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      run: |
-        cd $DEPLOY_PATH
-        git pull origin main
-        
-        # Create production .env
-        cat > .env << EOF
-        SECRET_KEY=${{ secrets.SECRET_KEY }}
-        DEBUG=False
-        ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
-        DB_NAME=${{ secrets.DB_NAME }}
-        DB_USER=${{ secrets.DB_USER }}
-        DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-        DB_HOST=${{ secrets.DB_HOST }}
-        DB_PORT=${{ secrets.DB_PORT }}
-        JWT_ACCESS_TOKEN_LIFETIME=60
-        JWT_REFRESH_TOKEN_LIFETIME=1440
-        AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}
-        AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}
-        AWS_S3_CUSTOM_DOMAIN=${{ secrets.AWS_S3_CUSTOM_DOMAIN }}
-        AWS_DEFAULT_ACL=private
-        EOF
-        
-        docker-compose down
-        docker-compose up -d --build
-        docker-compose exec -T web python manage.py migrate
-        docker-compose exec -T web python manage.py collectstatic --noinput
+      # 1. Limpieza Preventiva
+      # En self-hosted, a veces quedan contenedores "zombis" de ejecuciones fallidas.
+      # Esto asegura que los puertos 8080 no estén ocupados antes de empezar.
+      - name: Limpiar entorno previo
+        run: docker compose down --remove-orphans || true
+
+      # 2. Levantar servicios
+      # Usamos '-d' (detach) para que corran en segundo plano y el pipeline continúe
+      # '--build' asegura que se reconstruya la imagen con los cambios recientes
+      - name: Levantar Docker Compose
+        run: docker compose up -d --build
+
+      # 3. Esperar a que los servicios estén listos
+      # A veces la DB tarda unos segundos en arrancar. Un sleep simple suele bastar para demos,
+      # pero para producción es mejor usar scripts de "wait-for-it".
+      - name: Esperar inicialización
+        run: sleep 10
+
+      # 4. Ejecutar pruebas
+      # Opción A: Ejecutar un comando DENTRO del contenedor de la app
+      # Esto es útil si tus tests unitarios/integración viven dentro del código de la app.
+      - name: Correr tests dentro del contenedor
+        run: docker compose exec -T app npm test
+        # Nota: '-T' es necesario para evitar el error "the input device is not a TTY"
+
+      # Opción B: Probar desde fuera (Blackbox testing)
+      # Útil para verificar que el puerto responde.
+      - name: Verificar respuesta HTTP
+        run: curl --fail http://localhost:8080 || exit 1
+
+      # 5. Logs (Solo si falla)
+      # Si algo sale mal, queremos ver qué pasó antes de destruir todo.
+      - name: Mostrar logs si hubo error
+        if: failure()
+        run: docker compose logs
+
+      # 6. Limpieza Final (CRÍTICO)
+      # 'always()' asegura que esto corra aunque los tests fallen.
+      # Si no haces esto, el puerto 8080 quedará ocupado y el próximo push fallará.
+      - name: Apagar y limpiar
+        if: always()
+        run: docker compose down --rmi local --volumes

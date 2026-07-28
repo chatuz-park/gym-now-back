@@ -16,17 +16,17 @@ El esquema cubre tres áreas:
 
 ```mermaid
 erDiagram
-    User ||--|| CustomUser : "tiene perfil"
-    User ||--o| Client : "puede ser"
-    Client ||--o{ ClientRoutine : "tiene asignadas"
-    Routine ||--o{ ClientRoutine : "asignada a"
-    Routine }o--o{ Workout : "incluye"
-    Workout ||--o{ WorkoutSet : "compuesto por"
-    Exercise ||--o{ WorkoutSet : "usado en"
-    ClientRoutine ||--o{ RoutineProgress : "registra"
-    Workout ||--o{ RoutineProgress : "completado en"
-    Client ||--o{ ProgressMetrics : "mide"
-    Client ||--o{ Goal : "define"
+    User ||--|| CustomUser : tiene_perfil
+    User ||--o| Client : puede_ser
+    Client ||--o{ ClientRoutine : tiene_asignadas
+    Routine ||--o{ ClientRoutine : asignada_a
+    Routine }o--o{ Workout : incluye
+    Workout ||--o{ WorkoutSet : compuesto_por
+    Exercise ||--o{ WorkoutSet : usado_en
+    ClientRoutine ||--o{ RoutineProgress : registra
+    Workout ||--o{ RoutineProgress : completado_en
+    Client ||--o{ ProgressMetrics : mide
+    Client ||--o{ Goal : define
 
     User {
         int id PK
@@ -41,13 +41,13 @@ erDiagram
 
     CustomUser {
         int id PK
-        int user_id FK_UK
+        int user_id FK
         string role
     }
 
     Client {
         int id PK
-        int user_id FK_UK
+        int user_id FK
         string name
         string email UK
         string phone
@@ -93,7 +93,7 @@ erDiagram
         int reps
         float weight
         int rest_time
-        bool completed
+        boolean completed
     }
 
     Routine {
@@ -112,7 +112,7 @@ erDiagram
         int routine_id FK
         date start_date
         date end_date
-        bool is_active
+        boolean is_active
         json assigned_days
     }
 
@@ -145,7 +145,7 @@ erDiagram
         float current_value
         string unit
         date deadline
-        bool is_completed
+        boolean is_completed
         string category
     }
 ```
@@ -156,8 +156,8 @@ erDiagram
 
 ```mermaid
 erDiagram
-    User ||--|| CustomUser : "1:1"
-    User ||--o| Client : "1:0..1"
+    User ||--|| CustomUser : uno_a_uno
+    User ||--o| Client : uno_a_cero_o_uno
 
     User {
         int id PK
@@ -170,24 +170,26 @@ erDiagram
 
     CustomUser {
         int id PK
-        int user_id FK_UK
-        string role "client|trainer|guest|owner"
+        int user_id FK
+        string role
     }
 
     Client {
         int id PK
-        int user_id FK_UK "nullable"
+        int user_id FK
         string name
         string email UK
         string phone
         date birth_date
         float weight
         float height
-        string subscription_type "standard|premium|personalized"
+        string subscription_type
         date subscription_start
         date subscription_end
     }
 ```
+
+`CustomUser.user_id` y `Client.user_id` son Unique (OneToOne). `Client.user_id` puede ser null.
 
 ---
 
@@ -195,9 +197,9 @@ erDiagram
 
 ```mermaid
 erDiagram
-    Routine }o--o{ Workout : "M:N"
-    Workout ||--o{ WorkoutSet : "1:N"
-    Exercise ||--o{ WorkoutSet : "1:N"
+    Routine }o--o{ Workout : muchos_a_muchos
+    Workout ||--o{ WorkoutSet : uno_a_muchos
+    Exercise ||--o{ WorkoutSet : uno_a_muchos
 
     Exercise {
         int id PK
@@ -205,7 +207,7 @@ erDiagram
         text description
         json muscle_groups
         json equipment
-        string difficulty "beginner|intermediate|advanced"
+        string difficulty
         json instructions
         string video_url
         string image_url
@@ -216,8 +218,8 @@ erDiagram
         string name
         text description
         int estimated_duration
-        string difficulty "beginner|intermediate|advanced"
-        string category "strength|cardio|flexibility|mixed"
+        string difficulty
+        string category
     }
 
     WorkoutSet {
@@ -227,16 +229,16 @@ erDiagram
         int reps
         float weight
         int rest_time
-        bool completed
+        boolean completed
     }
 
     Routine {
         int id PK
         string name
         text description
-        string frequency "daily|weekly|custom"
+        string frequency
         int days_per_week
-        int duration "semanas"
+        int duration
         json scheduled_days
     }
 ```
@@ -249,12 +251,12 @@ erDiagram
 
 ```mermaid
 erDiagram
-    Client ||--o{ ClientRoutine : "1:N"
-    Routine ||--o{ ClientRoutine : "1:N"
-    ClientRoutine ||--o{ RoutineProgress : "1:N"
-    Workout ||--o{ RoutineProgress : "1:N"
-    Client ||--o{ ProgressMetrics : "1:N"
-    Client ||--o{ Goal : "1:N"
+    Client ||--o{ ClientRoutine : uno_a_muchos
+    Routine ||--o{ ClientRoutine : uno_a_muchos
+    ClientRoutine ||--o{ RoutineProgress : uno_a_muchos
+    Workout ||--o{ RoutineProgress : uno_a_muchos
+    Client ||--o{ ProgressMetrics : uno_a_muchos
+    Client ||--o{ Goal : uno_a_muchos
 
     Client {
         int id PK
@@ -278,7 +280,7 @@ erDiagram
         int routine_id FK
         date start_date
         date end_date
-        bool is_active
+        boolean is_active
         json assigned_days
     }
 
@@ -310,8 +312,8 @@ erDiagram
         float current_value
         string unit
         date deadline
-        bool is_completed
-        string category "weight|strength|endurance|flexibility|custom"
+        boolean is_completed
+        string category
     }
 ```
 

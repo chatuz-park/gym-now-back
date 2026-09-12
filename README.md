@@ -183,6 +183,10 @@ Si tienes problemas de CORS desde tu frontend:
 
 ## 📚 Documentación de la API
 
+- [docs/rbac.md](docs/rbac.md) — roles, matriz de endpoints, JWT y cómo regenerar Swagger
+- [docs/desarrollar-features.md](docs/desarrollar-features.md) — cómo desarrollar cualquier feature (modelo, API, tests, Swagger)
+- [docs/user-profile-endpoint.md](docs/user-profile-endpoint.md) — `GET /api/user-profile/`
+
 ### Actualizar Swagger JSON
 
 Para actualizar automáticamente la documentación cuando hagas cambios:

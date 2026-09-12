@@ -1,9 +1,81 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
+from django.utils.text import slugify
 from .models import (
-    Client, Exercise, Workout, WorkoutSet, Routine, 
-    ClientRoutine, RoutineProgress, ProgressMetrics, Goal
+    Client, CustomUser, Exercise, Workout, WorkoutSet, Routine,
+    ClientRoutine, RoutineProgress, ProgressMetrics, Goal, Plan
 )
+from .permissions import get_user_role, is_owner_role
+
+class PlanSerializer(serializers.ModelSerializer):
+    subscribers_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Plan
+        fields = [
+            'id', 'name', 'slug', 'description', 'price', 'duration_days',
+            'features', 'color', 'is_active', 'subscribers_count',
+        ]
+        read_only_fields = ['id', 'subscribers_count']
+        extra_kwargs = {
+            'slug': {'required': False, 'allow_blank': True},
+            'description': {'required': False, 'allow_blank': True},
+        }
+
+    def get_subscribers_count(self, obj):
+        annotated = getattr(obj, 'subscribers_count', None)
+        if annotated is not None and not isinstance(annotated, list):
+            try:
+                return int(annotated)
+            except (TypeError, ValueError):
+                pass
+        return Client.objects.filter(subscription_type=obj.slug).count()
+
+    def validate_features(self, value):
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Las características deben ser una lista.')
+        cleaned = []
+        for item in value:
+            if not isinstance(item, str) or not item.strip():
+                raise serializers.ValidationError('Cada característica debe ser un texto.')
+            cleaned.append(item.strip())
+        return cleaned
+
+    def validate_duration_days(self, value):
+        if value < 1:
+            raise serializers.ValidationError('La duración debe ser de al menos 1 día.')
+        return value
+
+    def validate(self, attrs):
+        instance = self.instance
+        is_active = attrs.get('is_active', getattr(instance, 'is_active', True))
+        if instance and is_active is False:
+            other_active = Plan.objects.filter(is_active=True).exclude(pk=instance.pk).exists()
+            if not other_active:
+                raise serializers.ValidationError({
+                    'detail': 'Debe quedar al menos un plan activo.',
+                })
+
+        slug = attrs.get('slug')
+        if not slug:
+            name = attrs.get('name') or (instance.name if instance else '')
+            slug = slugify(name)
+            if not slug:
+                raise serializers.ValidationError({
+                    'detail': 'El código del plan es obligatorio.',
+                })
+            attrs['slug'] = slug
+
+        if instance and slug != instance.slug:
+            if Client.objects.filter(subscription_type=instance.slug).exists():
+                raise serializers.ValidationError({
+                    'detail': 'No se puede cambiar el código de un plan con clientes asignados.',
+                })
+        return attrs
+
 
 class ExerciseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,13 +121,18 @@ class ClientSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     default_password = serializers.SerializerMethodField()
     age = serializers.ReadOnlyField()
+    plan = serializers.SerializerMethodField()
 
     class Meta:
         model = Client
         fields = '__all__'
 
     def get_default_password(self, obj):
-        """Retorna la contraseña por defecto generada"""
+        """Retorna la contraseña por defecto solo para owners."""
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not is_owner_role(get_user_role(user)):
+            return None
         if obj.user:
             return obj.generate_default_password()
         return None
@@ -76,6 +153,33 @@ class ClientSerializer(serializers.ModelSerializer):
         if Client.objects.filter(phone=value).exclude(pk=self.instance.pk if self.instance else None).exists():
             raise serializers.ValidationError("Este número de teléfono ya está registrado.")
         return value
+
+    def get_plan(self, obj):
+        if not obj.subscription_type:
+            return None
+        plans = self.context.get('_plans_by_slug')
+        if plans is None:
+            plans = {plan.slug: plan for plan in Plan.objects.all()}
+            self.context['_plans_by_slug'] = plans
+        plan = plans.get(obj.subscription_type)
+        if plan is None:
+            return None
+        return PlanSerializer(plan, context=self.context).data
+
+    def validate(self, attrs):
+        slug = attrs.get('subscription_type')
+        if slug:
+            plan = Plan.objects.filter(slug=slug).first()
+            if plan is None:
+                raise serializers.ValidationError({
+                    'detail': f'No existe un plan con código "{slug}".',
+                })
+            current = getattr(self.instance, 'subscription_type', None)
+            if not plan.is_active and slug != current:
+                raise serializers.ValidationError({
+                    'detail': 'No se puede asignar un plan inactivo.',
+                })
+        return attrs
 
 class ClientRoutineSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
@@ -169,7 +273,11 @@ class RoutineProgressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RoutineProgress
-        fields = ['id', 'client_routine', 'client_routine_id', 'workout', 'workout_id', 'completed_at', 'notes', 'rating']
+        fields = [
+            'id', 'client_routine', 'client_routine_id', 'workout', 'workout_id',
+            'started_at', 'completed_at', 'notes', 'rating',
+        ]
+        read_only_fields = ['id', 'completed_at']
 
 class ProgressMetricsSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
@@ -286,16 +394,103 @@ class RoutineCreateSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer para la información del usuario autenticado"""
-    role = serializers.CharField(source='custom_profile.role', read_only=True)
-    
+    role = serializers.ChoiceField(
+        source='custom_profile.role',
+        choices=[choice[0] for choice in CustomUser.ROLE_CHOICES],
+        read_only=True,
+    )
+
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name', 
+            'id', 'username', 'email', 'first_name', 'last_name',
             'date_joined', 'last_login', 'role'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'role']
 
+
+class UserRoleAdminSerializer(serializers.ModelSerializer):
+    """Listado y cambio de rol. Solo el campo role es escribible."""
+    role = serializers.ChoiceField(
+        source='custom_profile.role',
+        choices=[choice[0] for choice in CustomUser.ROLE_CHOICES],
+    )
+    client_id = serializers.SerializerMethodField()
+    is_last_owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'role', 'client_id', 'is_last_owner', 'date_joined', 'last_login',
+        ]
+        read_only_fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'client_id', 'is_last_owner', 'date_joined', 'last_login',
+        ]
+
+    def get_client_id(self, obj):
+        try:
+            return obj.client_profile.id
+        except Client.DoesNotExist:
+            return None
+
+    def get_is_last_owner(self, obj):
+        if get_user_role(obj) != 'owner':
+            return False
+        if not hasattr(self, '_owner_count'):
+            self._owner_count = CustomUser.objects.filter(role='owner').count()
+        return self._owner_count <= 1
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('role'):
+            data['role'] = get_user_role(instance) or 'guest'
+        return data
+
+    def validate(self, attrs):
+        instance = self.instance
+        profile_data = attrs.get('custom_profile') or {}
+        new_role = profile_data.get('role')
+        if instance is None or new_role is None:
+            return attrs
+
+        current_role = get_user_role(instance)
+        if current_role == 'owner' and new_role != 'owner':
+            owner_count = CustomUser.objects.filter(role='owner').count()
+            if owner_count <= 1:
+                raise serializers.ValidationError({
+                    'detail': 'No se puede quitar el rol de propietario al último owner.',
+                })
+        return attrs
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('custom_profile', {})
+        new_role = profile_data.get('role')
+        instance = super().update(instance, validated_data)
+        if new_role is not None:
+            profile, _ = CustomUser.objects.get_or_create(user=instance)
+            profile.role = new_role
+            profile.save(update_fields=['role'])
+            instance.custom_profile = profile
+        return instance
+
+
+class GymTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """JWT de acceso con claims de rol para el contrato RBAC."""
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['role'] = get_user_role(user) or 'guest'
+        token['user_id'] = user.id
+        return token
+
 class ProfileImageUploadSerializer(serializers.Serializer):
     """Serializer para subida de imagen de perfil"""
-    profile_image = serializers.ImageField() 
+    profile_image = serializers.ImageField()
+
+
+class ExerciseImageUploadSerializer(serializers.Serializer):
+    """Serializer para subida de imagen de ejercicio"""
+    image = serializers.ImageField() 

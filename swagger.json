@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "GymNow API",
-    "description": "API para gestión de gimnasio con clientes, ejercicios, rutinas y seguimiento de progreso",
+    "description": "API para gestión de gimnasio con clientes, ejercicios, rutinas y seguimiento de progreso. RBAC: owner administra todo; trainer gestiona operación sin borrar clientes ni ver credenciales; client/guest solo acceden a sus propios datos. Cada operación autenticada declara x-required-roles.",
     "termsOfService": "https://www.google.com/policies/terms/",
     "contact": {
       "email": "contact@gymnow.com"
@@ -24,13 +24,16 @@
     "application/json"
   ],
   "securityDefinitions": {
-    "Basic": {
-      "type": "basic"
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "JWT. Ejemplo: Bearer <access_token>"
     }
   },
   "security": [
     {
-      "Basic": []
+      "Bearer": []
     }
   ],
   "paths": {
@@ -46,7 +49,8 @@
         },
         "tags": [
           "client-login"
-        ]
+        ],
+        "security": []
       },
       "parameters": []
     },
@@ -133,10 +137,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "post": {
@@ -158,10 +179,25 @@
             "schema": {
               "$ref": "#/definitions/ClientRoutine"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -177,10 +213,27 @@
             "schema": {
               "$ref": "#/definitions/ClientRoutine"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -304,10 +357,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -431,10 +499,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -444,10 +527,25 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -463,14 +561,36 @@
     "/client-routines/{id}/complete_workout/": {
       "post": {
         "operationId": "client-routines_complete_workout",
-        "description": "Marcar un workout como completado",
+        "description": "Registrar una sesión de entrenamiento. Marca completed_at al momento del POST. started_at es opcional (hora en que el socio pulsó Iniciar).",
         "parameters": [
           {
             "name": "data",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/ClientRoutine"
+              "required": [
+                "workout_id"
+              ],
+              "type": "object",
+              "properties": {
+                "workout_id": {
+                  "description": "ID del entrenamiento",
+                  "type": "integer"
+                },
+                "started_at": {
+                  "description": "Hora de inicio de la sesión (ISO 8601)",
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "notes": {
+                  "description": "Notas opcionales",
+                  "type": "string"
+                },
+                "rating": {
+                  "description": "Valoración opcional",
+                  "type": "integer"
+                }
+              }
             }
           }
         ],
@@ -478,12 +598,29 @@
           "201": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/ClientRoutine"
+              "$ref": "#/definitions/RoutineProgress"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -507,10 +644,27 @@
             "schema": {
               "$ref": "#/definitions/ClientRoutine"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "client-routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -709,10 +863,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "post": {
@@ -734,10 +903,25 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -919,10 +1103,24 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
         ]
       },
       "parameters": []
@@ -1104,10 +1302,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": []
@@ -1289,10 +1504,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -1308,10 +1538,27 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -1333,10 +1580,25 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -1358,10 +1620,25 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -1371,10 +1648,24 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
         ]
       },
       "parameters": [
@@ -1398,10 +1689,24 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
         ]
       },
       "parameters": [
@@ -1425,10 +1730,27 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -1452,10 +1774,27 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -1479,10 +1818,27 @@
             "schema": {
               "$ref": "#/definitions/Client"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -1529,6 +1885,12 @@
           },
           "404": {
             "description": "Cliente no encontrado"
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "consumes": [
@@ -1537,6 +1899,17 @@
         ],
         "tags": [
           "clients"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -1652,10 +2025,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "post": {
@@ -1677,10 +2067,25 @@
             "schema": {
               "$ref": "#/definitions/Exercise"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -1785,10 +2190,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": []
@@ -1893,10 +2315,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": []
@@ -1912,10 +2351,27 @@
             "schema": {
               "$ref": "#/definitions/Exercise"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -1937,10 +2393,25 @@
             "schema": {
               "$ref": "#/definitions/Exercise"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -1962,10 +2433,25 @@
             "schema": {
               "$ref": "#/definitions/Exercise"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -1975,10 +2461,94 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this exercise.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/exercises/{id}/upload_image/": {
+      "post": {
+        "operationId": "exercises_upload_image",
+        "description": "Subir imagen del ejercicio a S3. El ID del ejercicio va en la URL.",
+        "parameters": [
+          {
+            "name": "image",
+            "in": "formData",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Imagen subida exitosamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "image_url": {
+                  "description": "URL de la imagen",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "Mensaje de confirmación",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error en la solicitud"
+          },
+          "404": {
+            "description": "Ejercicio no encontrado"
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "consumes": [
+          "multipart/form-data",
+          "application/x-www-form-urlencoded"
+        ],
+        "tags": [
+          "exercises"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -2103,10 +2673,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "post": {
@@ -2128,10 +2713,25 @@
             "schema": {
               "$ref": "#/definitions/Goal"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -2243,10 +2843,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -2358,10 +2973,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -2377,10 +3007,27 @@
             "schema": {
               "$ref": "#/definitions/Goal"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -2402,10 +3049,25 @@
             "schema": {
               "$ref": "#/definitions/Goal"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -2427,10 +3089,25 @@
             "schema": {
               "$ref": "#/definitions/Goal"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -2440,10 +3117,25 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -2476,10 +3168,27 @@
             "schema": {
               "$ref": "#/definitions/Goal"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "goals"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -2487,6 +3196,291 @@
           "name": "id",
           "in": "path",
           "description": "A unique integer value identifying this goal.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/plans/": {
+      "get": {
+        "operationId": "plans_list",
+        "description": "Lista de planes de suscripción",
+        "parameters": [
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "Filtrar por planes activos",
+            "type": "boolean"
+          },
+          {
+            "name": "color",
+            "in": "query",
+            "description": "Color",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Búsqueda en nombre, código y descripción",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'name', '-price'",
+            "type": "string",
+            "enum": [
+              "name",
+              "-name",
+              "price",
+              "-price",
+              "duration_days",
+              "-duration_days"
+            ]
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Número de página",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Plan"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
+        ]
+      },
+      "post": {
+        "operationId": "plans_create",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Plan"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Plan"
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
+        ]
+      },
+      "parameters": []
+    },
+    "/plans/{id}/": {
+      "get": {
+        "operationId": "plans_read",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Plan"
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
+        ]
+      },
+      "put": {
+        "operationId": "plans_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Plan"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Plan"
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
+        ]
+      },
+      "patch": {
+        "operationId": "plans_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Plan"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Plan"
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
+        ]
+      },
+      "delete": {
+        "operationId": "plans_delete",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "plans"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this Plan.",
           "required": true,
           "type": "integer"
         }
@@ -2565,10 +3559,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "progress-metrics"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "post": {
@@ -2590,10 +3599,25 @@
             "schema": {
               "$ref": "#/definitions/ProgressMetrics"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "progress-metrics"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -2663,10 +3687,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "progress-metrics"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": []
@@ -2682,10 +3723,27 @@
             "schema": {
               "$ref": "#/definitions/ProgressMetrics"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "progress-metrics"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -2707,10 +3765,25 @@
             "schema": {
               "$ref": "#/definitions/ProgressMetrics"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "progress-metrics"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -2732,10 +3805,25 @@
             "schema": {
               "$ref": "#/definitions/ProgressMetrics"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "progress-metrics"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -2745,10 +3833,25 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "progress-metrics"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -2837,10 +3940,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routine-progress"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "post": {
@@ -2862,10 +3980,25 @@
             "schema": {
               "$ref": "#/definitions/RoutineProgress"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routine-progress"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -2881,10 +4014,27 @@
             "schema": {
               "$ref": "#/definitions/RoutineProgress"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routine-progress"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -2906,10 +4056,25 @@
             "schema": {
               "$ref": "#/definitions/RoutineProgress"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routine-progress"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -2931,10 +4096,25 @@
             "schema": {
               "$ref": "#/definitions/RoutineProgress"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routine-progress"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -2944,10 +4124,25 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routine-progress"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -3144,10 +4339,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "post": {
@@ -3169,10 +4381,25 @@
             "schema": {
               "$ref": "#/definitions/RoutineCreate"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -3354,10 +4581,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": []
@@ -3539,10 +4783,25 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -3558,10 +4817,27 @@
             "schema": {
               "$ref": "#/definitions/Routine"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -3583,10 +4859,25 @@
             "schema": {
               "$ref": "#/definitions/RoutineCreate"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -3608,10 +4899,25 @@
             "schema": {
               "$ref": "#/definitions/RoutineCreate"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -3621,10 +4927,25 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -3648,10 +4969,27 @@
             "schema": {
               "$ref": "#/definitions/Routine"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "routines"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -3667,14 +5005,14 @@
     "/token/": {
       "post": {
         "operationId": "token_create",
-        "description": "Takes a set of user credentials and returns an access and refresh JSON web\ntoken pair to prove the authentication of those credentials.",
+        "description": "",
         "parameters": [
           {
             "name": "data",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/TokenObtainPair"
+              "$ref": "#/definitions/GymTokenObtainPair"
             }
           }
         ],
@@ -3682,20 +5020,21 @@
           "201": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/TokenObtainPair"
+              "$ref": "#/definitions/GymTokenObtainPair"
             }
           }
         },
         "tags": [
           "token"
-        ]
+        ],
+        "security": []
       },
       "parameters": []
     },
     "/token/refresh/": {
       "post": {
         "operationId": "token_refresh_create",
-        "description": "Takes a refresh type JSON web token and returns an access type JSON web\ntoken if the refresh token is valid.",
+        "description": "",
         "parameters": [
           {
             "name": "data",
@@ -3716,7 +5055,8 @@
         },
         "tags": [
           "token"
-        ]
+        ],
+        "security": []
       },
       "parameters": []
     },
@@ -3738,13 +5078,204 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "user-profile"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": []
+    },
+    "/users/": {
+      "get": {
+        "operationId": "users_list",
+        "summary": "Listar usuarios",
+        "description": "Lista usuarios con su rol. Solo owner.",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "description": "Filtrar por rol",
+            "type": "string",
+            "enum": [
+              "client",
+              "guest",
+              "trainer",
+              "owner"
+            ]
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Búsqueda en username, email, nombre y apellido",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Campo de ordenamiento. Usar '-' para descendente.",
+            "type": "string",
+            "enum": [
+              "username",
+              "-username",
+              "date_joined",
+              "-date_joined"
+            ]
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Número de página",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri",
+                  "x-nullable": true
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/UserRoleAdmin"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "users"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
+        ]
+      },
+      "parameters": []
+    },
+    "/users/{id}/": {
+      "get": {
+        "operationId": "users_read",
+        "description": "Listado y asignación de roles. Solo owner; no crea ni borra cuentas.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/UserRoleAdmin"
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "users"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
+        ]
+      },
+      "patch": {
+        "operationId": "users_partial_update",
+        "summary": "Actualizar rol de usuario",
+        "description": "Cambia el rol de un usuario. No permite quitar el último owner.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserRoleAdmin"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/UserRoleAdmin"
+            }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
+          }
+        },
+        "tags": [
+          "users"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this user.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
     },
     "/workout-sets/": {
       "get": {
@@ -3824,10 +5355,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workout-sets"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "post": {
@@ -3849,10 +5397,25 @@
             "schema": {
               "$ref": "#/definitions/WorkoutSet"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workout-sets"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -3868,10 +5431,27 @@
             "schema": {
               "$ref": "#/definitions/WorkoutSet"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workout-sets"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -3893,10 +5473,25 @@
             "schema": {
               "$ref": "#/definitions/WorkoutSet"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workout-sets"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -3918,10 +5513,25 @@
             "schema": {
               "$ref": "#/definitions/WorkoutSet"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workout-sets"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -3931,10 +5541,25 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workout-sets"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -4066,10 +5691,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "post": {
@@ -4091,10 +5733,25 @@
             "schema": {
               "$ref": "#/definitions/WorkoutCreate"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": []
@@ -4213,10 +5870,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": []
@@ -4232,10 +5906,27 @@
             "schema": {
               "$ref": "#/definitions/Workout"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "put": {
@@ -4257,10 +5948,25 @@
             "schema": {
               "$ref": "#/definitions/WorkoutCreate"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "patch": {
@@ -4282,10 +5988,25 @@
             "schema": {
               "$ref": "#/definitions/WorkoutCreate"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "delete": {
@@ -4295,10 +6016,25 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "owner",
+          "trainer"
         ]
       },
       "parameters": [
@@ -4322,10 +6058,27 @@
             "schema": {
               "$ref": "#/definitions/Workout"
             }
+          },
+          "401": {
+            "description": "Authentication credentials were not provided."
+          },
+          "403": {
+            "description": "You do not have permission to perform this action."
           }
         },
         "tags": [
           "workouts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "x-required-roles": [
+          "client",
+          "trainer",
+          "guest",
+          "owner"
         ]
       },
       "parameters": [
@@ -4374,6 +6127,11 @@
         },
         "age": {
           "title": "Age",
+          "type": "string",
+          "readOnly": true
+        },
+        "plan": {
+          "title": "Plan",
           "type": "string",
           "readOnly": true
         },
@@ -4428,11 +6186,7 @@
         "subscription_type": {
           "title": "Subscription type",
           "type": "string",
-          "enum": [
-            "standard",
-            "premium",
-            "personalized"
-          ],
+          "maxLength": 50,
           "x-nullable": true
         },
         "subscription_start": {
@@ -4745,6 +6499,58 @@
         }
       }
     },
+    "RoutineProgress": {
+      "required": [
+        "client_routine_id",
+        "workout_id"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "client_routine": {
+          "$ref": "#/definitions/ClientRoutine"
+        },
+        "client_routine_id": {
+          "title": "Client routine id",
+          "type": "integer"
+        },
+        "workout": {
+          "$ref": "#/definitions/Workout"
+        },
+        "workout_id": {
+          "title": "Workout id",
+          "type": "integer"
+        },
+        "started_at": {
+          "title": "Started at",
+          "type": "string",
+          "format": "date-time",
+          "x-nullable": true
+        },
+        "completed_at": {
+          "title": "Completed at",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "notes": {
+          "title": "Notes",
+          "type": "string",
+          "x-nullable": true
+        },
+        "rating": {
+          "title": "Rating",
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 0,
+          "x-nullable": true
+        }
+      }
+    },
     "Goal": {
       "required": [
         "client_id",
@@ -4817,6 +6623,75 @@
         }
       }
     },
+    "Plan": {
+      "required": [
+        "name",
+        "price"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 1
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string",
+          "format": "slug",
+          "pattern": "^[-a-zA-Z0-9_]+$",
+          "maxLength": 50
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "price": {
+          "title": "Price",
+          "description": "Precio en COP",
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 0
+        },
+        "duration_days": {
+          "title": "Duration days",
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 0
+        },
+        "features": {
+          "title": "Features",
+          "type": "object"
+        },
+        "color": {
+          "title": "Color",
+          "type": "string",
+          "enum": [
+            "blue",
+            "purple",
+            "green",
+            "orange",
+            "red",
+            "gray"
+          ]
+        },
+        "is_active": {
+          "title": "Is active",
+          "type": "boolean"
+        },
+        "subscribers_count": {
+          "title": "Subscribers count",
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
     "ProgressMetrics": {
       "required": [
         "client_id",
@@ -4863,52 +6738,6 @@
         "photos": {
           "title": "Photos",
           "type": "object",
-          "x-nullable": true
-        }
-      }
-    },
-    "RoutineProgress": {
-      "required": [
-        "client_routine_id",
-        "workout_id",
-        "completed_at"
-      ],
-      "type": "object",
-      "properties": {
-        "id": {
-          "title": "ID",
-          "type": "integer",
-          "readOnly": true
-        },
-        "client_routine": {
-          "$ref": "#/definitions/ClientRoutine"
-        },
-        "client_routine_id": {
-          "title": "Client routine id",
-          "type": "integer"
-        },
-        "workout": {
-          "$ref": "#/definitions/Workout"
-        },
-        "workout_id": {
-          "title": "Workout id",
-          "type": "integer"
-        },
-        "completed_at": {
-          "title": "Completed at",
-          "type": "string",
-          "format": "date-time"
-        },
-        "notes": {
-          "title": "Notes",
-          "type": "string",
-          "x-nullable": true
-        },
-        "rating": {
-          "title": "Rating",
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0,
           "x-nullable": true
         }
       }
@@ -5055,7 +6884,7 @@
         }
       }
     },
-    "TokenObtainPair": {
+    "GymTokenObtainPair": {
       "required": [
         "username",
         "password"
@@ -5144,8 +6973,85 @@
         "role": {
           "title": "Role",
           "type": "string",
+          "enum": [
+            "client",
+            "trainer",
+            "guest",
+            "owner"
+          ],
+          "readOnly": true
+        }
+      }
+    },
+    "UserRoleAdmin": {
+      "required": [
+        "role"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "username": {
+          "title": "Username",
+          "description": "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.",
+          "type": "string",
           "readOnly": true,
           "minLength": 1
+        },
+        "email": {
+          "title": "Email address",
+          "type": "string",
+          "format": "email",
+          "readOnly": true,
+          "minLength": 1
+        },
+        "first_name": {
+          "title": "First name",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1
+        },
+        "last_name": {
+          "title": "Last name",
+          "type": "string",
+          "readOnly": true,
+          "minLength": 1
+        },
+        "role": {
+          "title": "Role",
+          "type": "string",
+          "enum": [
+            "client",
+            "trainer",
+            "guest",
+            "owner"
+          ]
+        },
+        "client_id": {
+          "title": "Client id",
+          "type": "string",
+          "readOnly": true
+        },
+        "is_last_owner": {
+          "title": "Is last owner",
+          "type": "string",
+          "readOnly": true
+        },
+        "date_joined": {
+          "title": "Date joined",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "last_login": {
+          "title": "Last login",
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "x-nullable": true
         }
       }
     }

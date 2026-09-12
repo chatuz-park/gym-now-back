@@ -1,37 +1,128 @@
 from django.shortcuts import render
 from django.db import models
-from rest_framework import viewsets, status, filters
+from django.contrib.auth.models import User
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from rest_framework import viewsets, status, filters, mixins
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .filters import ClientFilter, RoutineFilter, ExerciseFilter, WorkoutFilter, GoalFilter
+from .filters import ClientFilter, RoutineFilter, ExerciseFilter, WorkoutFilter, GoalFilter, UserFilter, PlanFilter
 from .models import (
-    Client, Exercise, Workout, WorkoutSet, Routine, 
-    ClientRoutine, RoutineProgress, ProgressMetrics, Goal
+    Client, Exercise, Workout, WorkoutSet, Routine,
+    ClientRoutine, RoutineProgress, ProgressMetrics, Goal, Plan
 )
 from .serializers import (
     ClientSerializer, ExerciseSerializer, WorkoutSerializer, WorkoutSetSerializer,
     RoutineSerializer, ClientRoutineSerializer, RoutineProgressSerializer,
     ProgressMetricsSerializer, GoalSerializer, WorkoutCreateSerializer, RoutineCreateSerializer,
-    UserProfileSerializer, ProfileImageUploadSerializer
+    UserProfileSerializer, UserRoleAdminSerializer, ProfileImageUploadSerializer,
+    ExerciseImageUploadSerializer, GymTokenObtainPairSerializer,
+    PlanSerializer,
 )
 from .services import upload_file_to_s3, delete_file_from_s3
+from .permissions import (
+    RoleMapMixin, ALL_ROLES, STAFF_ROLES, OWNER_ROLES,
+    get_user_role, get_user_client, is_member_role,
+)
 
 # Create your views here.
 
-class ClientViewSet(viewsets.ModelViewSet):
+class PlanViewSet(RoleMapMixin, viewsets.ModelViewSet):
+    queryset = Plan.objects.all()
+    serializer_class = PlanSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = PlanFilter
+    ordering_fields = ['name', 'price', 'duration_days']
+    ordering = ['price', 'name']
+    role_map = {
+        'list': STAFF_ROLES,
+        'retrieve': STAFF_ROLES,
+        'create': OWNER_ROLES,
+        'update': OWNER_ROLES,
+        'partial_update': OWNER_ROLES,
+        'destroy': OWNER_ROLES,
+        'default': OWNER_ROLES,
+    }
+
+    @swagger_auto_schema(
+        operation_description="Lista de planes de suscripción",
+        manual_parameters=[
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para orden descendente. Ejemplos: 'name', '-price'",
+                type=openapi.TYPE_STRING,
+                enum=['name', '-name', 'price', '-price', 'duration_days', '-duration_days'],
+            ),
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Búsqueda en nombre, código y descripción",
+                type=openapi.TYPE_STRING,
+            ),
+            openapi.Parameter(
+                'is_active',
+                openapi.IN_QUERY,
+                description="Filtrar por planes activos",
+                type=openapi.TYPE_BOOLEAN,
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER,
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def perform_destroy(self, instance):
+        from rest_framework.exceptions import ValidationError
+
+        if Client.objects.filter(subscription_type=instance.slug).exists():
+            raise ValidationError({
+                'detail': 'No se puede eliminar un plan con clientes asignados. Desactívalo.',
+            })
+        if Plan.objects.count() <= 1:
+            raise ValidationError({
+                'detail': 'No se puede eliminar el último plan.',
+            })
+        instance.delete()
+
+
+class ClientViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ClientFilter
     ordering_fields = ['name', 'join_date', 'birth_date', 'weight', 'height']
     ordering = ['-join_date']  # Más reciente primero
+    role_map = {
+        'list': STAFF_ROLES,
+        'create': STAFF_ROLES,
+        'retrieve': ALL_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': OWNER_ROLES,
+        'progress': ALL_ROLES,
+        'goals': ALL_ROLES,
+        'routines': ALL_ROLES,
+        'credentials': OWNER_ROLES,
+        'all_credentials': OWNER_ROLES,
+        'statistics': STAFF_ROLES,
+        'me': ALL_ROLES,
+        'upload_profile_image': ALL_ROLES,
+    }
+    object_permission_actions = frozenset({
+        'retrieve', 'progress', 'goals', 'routines', 'upload_profile_image',
+    })
 
     @swagger_auto_schema(
         operation_description="Lista de clientes con ordenamiento configurable",
@@ -136,7 +227,6 @@ class ClientViewSet(viewsets.ModelViewSet):
             models.Q(subscription_end__gt=timezone.now().date())
         ).count()
         
-        # Estadísticas por tipo de suscripción
         subscription_stats = Client.objects.values('subscription_type').annotate(
             count=Count('id')
         )
@@ -169,19 +259,17 @@ class ClientViewSet(viewsets.ModelViewSet):
             'monthly_registrations': monthly_registrations
         })
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'])
     def me(self, request):
         """Obtener los datos del cliente autenticado"""
-        try:
-            # Obtener el cliente asociado al usuario autenticado
-            client = request.user.client_profile
-            serializer = self.get_serializer(client)
-            return Response(serializer.data)
-        except:
+        client = get_user_client(request.user)
+        if client is None:
             return Response(
-                {'error': 'No se encontró perfil de cliente para este usuario'}, 
+                {'error': 'No se encontró perfil de cliente para este usuario'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        serializer = self.get_serializer(client)
+        return Response(serializer.data)
 
     @swagger_auto_schema(
         method='post',
@@ -245,13 +333,24 @@ class ClientViewSet(viewsets.ModelViewSet):
             'message': 'Imagen de perfil actualizada exitosamente'
         })
 
-class ExerciseViewSet(viewsets.ModelViewSet):
+class ExerciseViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = Exercise.objects.all()
     serializer_class = ExerciseSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ExerciseFilter
     ordering_fields = ['name', 'difficulty']
     ordering = ['name']
+    role_map = {
+        'list': ALL_ROLES,
+        'retrieve': ALL_ROLES,
+        'create': STAFF_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+        'by_difficulty': ALL_ROLES,
+        'by_muscle_group': ALL_ROLES,
+        'upload_image': STAFF_ROLES,
+    }
 
     @swagger_auto_schema(
         operation_description="Lista de ejercicios con ordenamiento configurable",
@@ -296,12 +395,80 @@ class ExerciseViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(exercises, many=True)
         return Response(serializer.data)
 
-class WorkoutViewSet(viewsets.ModelViewSet):
+    @swagger_auto_schema(
+        method='post',
+        operation_description="Subir imagen del ejercicio a S3. El ID del ejercicio va en la URL.",
+        request_body=ExerciseImageUploadSerializer,
+        responses={
+            200: openapi.Response(
+                description="Imagen subida exitosamente",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'image_url': openapi.Schema(type=openapi.TYPE_STRING, description='URL de la imagen'),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de confirmación')
+                    }
+                )
+            ),
+            400: "Error en la solicitud",
+            404: "Ejercicio no encontrado"
+        }
+    )
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_image(self, request, pk=None):
+        """Subir imagen del ejercicio a S3"""
+        exercise = self.get_object()
+
+        if 'image' not in request.FILES:
+            return Response(
+                {'error': 'Se requiere el archivo image'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        file = request.FILES['image']
+
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+        if file.content_type not in allowed_types:
+            return Response(
+                {'error': 'Tipo de archivo no permitido. Use JPG, PNG, GIF o WebP'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if exercise.image_url:
+            delete_file_from_s3(exercise.image_url)
+
+        file_url = upload_file_to_s3(file, folder="exercises")
+
+        if not file_url:
+            return Response(
+                {'error': 'Error al subir la imagen'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        exercise.image_url = file_url
+        exercise.save(update_fields=['image_url'])
+
+        return Response({
+            'image_url': file_url,
+            'message': 'Imagen del ejercicio actualizada exitosamente'
+        })
+
+class WorkoutViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = Workout.objects.all()
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = WorkoutFilter
     ordering_fields = ['name', 'difficulty', 'estimated_duration']
     ordering = ['name']
+    role_map = {
+        'list': ALL_ROLES,
+        'retrieve': ALL_ROLES,
+        'create': STAFF_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+        'sets': ALL_ROLES,
+        'by_category': ALL_ROLES,
+    }
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -351,13 +518,21 @@ class WorkoutViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(workouts, many=True)
         return Response(serializer.data)
 
-class WorkoutSetViewSet(viewsets.ModelViewSet):
+class WorkoutSetViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = WorkoutSet.objects.all()
     serializer_class = WorkoutSetSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['workout', 'exercise', 'completed']
     ordering_fields = ['reps', 'weight', 'rest_time']
     ordering = ['-id']  # Más reciente primero
+    role_map = {
+        'list': ALL_ROLES,
+        'retrieve': ALL_ROLES,
+        'create': STAFF_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+    }
 
     @swagger_auto_schema(
         operation_description="Lista de workout sets con ordenamiento configurable",
@@ -380,13 +555,24 @@ class WorkoutSetViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-class RoutineViewSet(viewsets.ModelViewSet):
+class RoutineViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = Routine.objects.all()
     serializer_class = RoutineSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = RoutineFilter
     ordering_fields = ['name', 'duration', 'days_per_week', 'frequency']
     ordering = ['name']
+    role_map = {
+        'list': ALL_ROLES,
+        'retrieve': ALL_ROLES,
+        'create': STAFF_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+        'workouts': ALL_ROLES,
+        'by_frequency': ALL_ROLES,
+        'statistics': STAFF_ROLES,
+    }
 
     @swagger_auto_schema(
         operation_description="Lista de rutinas con ordenamiento configurable",
@@ -493,13 +679,35 @@ class RoutineViewSet(viewsets.ModelViewSet):
             'popular_routines': popular_routines_data
         })
 
-class ClientRoutineViewSet(viewsets.ModelViewSet):
+class ClientRoutineViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = ClientRoutine.objects.all()
     serializer_class = ClientRoutineSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['client', 'routine', 'is_active', 'start_date']
     ordering_fields = ['start_date', 'end_date']
     ordering = ['-start_date']
+    role_map = {
+        'list': ALL_ROLES,
+        'create': STAFF_ROLES,
+        'retrieve': ALL_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+        'progress': ALL_ROLES,
+        'complete_workout': ALL_ROLES,
+    }
+    object_permission_actions = frozenset({
+        'retrieve', 'progress', 'complete_workout',
+    })
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == 'list' and is_member_role(get_user_role(self.request.user)):
+            client = get_user_client(self.request.user)
+            if client is None:
+                return queryset.none()
+            return queryset.filter(client=client)
+        return queryset
 
     @swagger_auto_schema(
         operation_description="Lista de rutinas de clientes con ordenamiento configurable",
@@ -590,41 +798,110 @@ class ClientRoutineViewSet(viewsets.ModelViewSet):
     def progress(self, request, pk=None):
         """Obtener el progreso de una rutina de cliente específica"""
         client_routine = self.get_object()
-        progress = RoutineProgress.objects.filter(client_routine=client_routine)
+        progress = RoutineProgress.objects.filter(client_routine=client_routine).order_by('-completed_at')
         serializer = RoutineProgressSerializer(progress, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(
+        operation_description=(
+            "Registrar una sesión de entrenamiento. Marca completed_at al momento del POST. "
+            "started_at es opcional (hora en que el socio pulsó Iniciar)."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['workout_id'],
+            properties={
+                'workout_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del entrenamiento'),
+                'started_at': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format='date-time',
+                    description='Hora de inicio de la sesión (ISO 8601)',
+                ),
+                'notes': openapi.Schema(type=openapi.TYPE_STRING, description='Notas opcionales'),
+                'rating': openapi.Schema(type=openapi.TYPE_INTEGER, description='Valoración opcional'),
+            },
+        ),
+        responses={201: RoutineProgressSerializer()},
+    )
     @action(detail=True, methods=['post'])
     def complete_workout(self, request, pk=None):
-        """Marcar un workout como completado"""
+        """Registrar el fin de un workout y, si viene, la hora de inicio."""
         client_routine = self.get_object()
         workout_id = request.data.get('workout_id')
-        notes = request.data.get('notes', '')
+        notes = request.data.get('notes', '') or ''
         rating = request.data.get('rating', None)
-        
-        try:
-            workout = Workout.objects.get(id=workout_id)
-            progress = RoutineProgress.objects.create(
-                client_routine=client_routine,
-                workout=workout,
-                notes=notes,
-                rating=rating
-            )
-            serializer = RoutineProgressSerializer(progress)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Workout.DoesNotExist:
+        started_at_raw = request.data.get('started_at')
+
+        if not workout_id:
             return Response(
-                {'error': 'Workout no encontrado'}, 
-                status=status.HTTP_404_NOT_FOUND
+                {'detail': 'workout_id es requerido'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-class RoutineProgressViewSet(viewsets.ModelViewSet):
+        try:
+            workout = Workout.objects.get(id=workout_id)
+        except Workout.DoesNotExist:
+            return Response(
+                {'error': 'Workout no encontrado'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not client_routine.routine.workouts.filter(id=workout.id).exists():
+            return Response(
+                {'detail': 'Este entrenamiento no pertenece a la rutina asignada'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        started_at = None
+        if started_at_raw:
+            started_at = parse_datetime(str(started_at_raw))
+            if started_at is None:
+                return Response(
+                    {'detail': 'started_at no es una fecha válida'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if timezone.is_naive(started_at):
+                started_at = timezone.make_aware(started_at)
+            if started_at > timezone.now():
+                return Response(
+                    {'detail': 'started_at no puede ser futuro'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        completed_at = timezone.now()
+        if started_at and started_at > completed_at:
+            return Response(
+                {'detail': 'started_at no puede ser posterior a la hora de fin'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        progress = RoutineProgress.objects.create(
+            client_routine=client_routine,
+            workout=workout,
+            started_at=started_at,
+            completed_at=completed_at,
+            notes=notes,
+            rating=rating,
+        )
+        serializer = RoutineProgressSerializer(progress)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class RoutineProgressViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = RoutineProgress.objects.all()
     serializer_class = RoutineProgressSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['client_routine', 'workout', 'completed_at']
     ordering_fields = ['completed_at', 'rating']
     ordering = ['-completed_at']
+    role_map = {
+        'list': STAFF_ROLES,
+        'create': STAFF_ROLES,
+        'retrieve': ALL_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+    }
+    object_permission_actions = frozenset({'retrieve'})
 
     @swagger_auto_schema(
         operation_description="Lista de progreso de rutinas con ordenamiento configurable",
@@ -647,13 +924,23 @@ class RoutineProgressViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-class ProgressMetricsViewSet(viewsets.ModelViewSet):
+class ProgressMetricsViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = ProgressMetrics.objects.all()
     serializer_class = ProgressMetricsSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['client', 'date']
     ordering_fields = ['date', 'weight', 'body_fat', 'muscle_mass']
     ordering = ['-date']
+    role_map = {
+        'list': STAFF_ROLES,
+        'create': STAFF_ROLES,
+        'retrieve': ALL_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+        'client_progress': ALL_ROLES,
+    }
+    object_permission_actions = frozenset({'retrieve'})
 
     @swagger_auto_schema(
         operation_description="Lista de métricas de progreso con ordenamiento configurable",
@@ -682,21 +969,41 @@ class ProgressMetricsViewSet(viewsets.ModelViewSet):
         client_id = request.query_params.get('client_id')
         if not client_id:
             return Response(
-                {'error': 'client_id es requerido'}, 
+                {'error': 'client_id es requerido'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        if is_member_role(get_user_role(request.user)):
+            own_client = get_user_client(request.user)
+            if own_client is None or str(own_client.id) != str(client_id):
+                return Response(
+                    {'detail': 'No tienes permiso para acceder a este recurso.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         progress = self.queryset.filter(client_id=client_id).order_by('-date')
         serializer = self.get_serializer(progress, many=True)
         return Response(serializer.data)
 
-class GoalViewSet(viewsets.ModelViewSet):
+class GoalViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = Goal.objects.all()
     serializer_class = GoalSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = GoalFilter
     ordering_fields = ['deadline', 'target_value', 'current_value']
     ordering = ['deadline']  # Más urgente primero (deadline ascendente)
+    role_map = {
+        'list': STAFF_ROLES,
+        'create': STAFF_ROLES,
+        'retrieve': ALL_ROLES,
+        'update': STAFF_ROLES,
+        'partial_update': STAFF_ROLES,
+        'destroy': STAFF_ROLES,
+        'update_progress': ALL_ROLES,
+        'completed': STAFF_ROLES,
+        'pending': STAFF_ROLES,
+    }
+    object_permission_actions = frozenset({'retrieve', 'update_progress'})
 
     @swagger_auto_schema(
         operation_description="Lista de objetivos con ordenamiento configurable",
@@ -781,17 +1088,14 @@ def client_login(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
     
-    # Verificar que el usuario tenga un perfil de cliente
-    try:
-        client = user.client_profile
-    except:
+    client = get_user_client(user)
+    if client is None:
         return Response(
-            {'error': 'Usuario no tiene perfil de cliente'}, 
+            {'error': 'Usuario no tiene perfil de cliente'},
             status=status.HTTP_403_FORBIDDEN
         )
     
-    # Generar tokens JWT
-    refresh = RefreshToken.for_user(user)
+    refresh = GymTokenObtainPairSerializer.get_token(user)
     
     return Response({
         'access_token': str(refresh.access_token),
@@ -812,6 +1116,73 @@ def client_login(request):
         }
     })
 
+class UserViewSet(
+    RoleMapMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Listado y asignación de roles. Solo owner; no crea ni borra cuentas."""
+    queryset = User.objects.select_related('custom_profile', 'client_profile').all()
+    serializer_class = UserRoleAdminSerializer
+    http_method_names = ['get', 'patch', 'head', 'options']
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = UserFilter
+    ordering_fields = ['username', 'date_joined']
+    ordering = ['username']
+    role_map = {
+        'list': OWNER_ROLES,
+        'retrieve': OWNER_ROLES,
+        'partial_update': OWNER_ROLES,
+        'default': OWNER_ROLES,
+    }
+
+    @swagger_auto_schema(
+        operation_description="Lista usuarios con su rol. Solo owner.",
+        operation_summary="Listar usuarios",
+        manual_parameters=[
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Búsqueda en username, email, nombre y apellido",
+                type=openapi.TYPE_STRING,
+            ),
+            openapi.Parameter(
+                'role',
+                openapi.IN_QUERY,
+                description="Filtrar por rol",
+                type=openapi.TYPE_STRING,
+                enum=['client', 'guest', 'trainer', 'owner'],
+            ),
+            openapi.Parameter(
+                'ordering',
+                openapi.IN_QUERY,
+                description="Campo de ordenamiento. Usar '-' para descendente.",
+                type=openapi.TYPE_STRING,
+                enum=['username', '-username', 'date_joined', '-date_joined'],
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Número de página",
+                type=openapi.TYPE_INTEGER,
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="Cambia el rol de un usuario. No permite quitar el último owner.",
+        operation_summary="Actualizar rol de usuario",
+        request_body=UserRoleAdminSerializer,
+        responses={200: UserRoleAdminSerializer},
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+
 @swagger_auto_schema(
     method='get',
     responses={
@@ -827,12 +1198,15 @@ def client_login(request):
 def user_profile(request):
     """Endpoint para obtener la información del usuario autenticado basado en el token de sesión"""
     try:
-        # El usuario ya está autenticado gracias al decorador @permission_classes([IsAuthenticated])
         user = request.user
         serializer = UserProfileSerializer(user)
         return Response(serializer.data)
     except Exception as e:
         return Response(
-            {'error': f'Error al obtener información del usuario: {str(e)}'}, 
+            {'error': f'Error al obtener información del usuario: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+user_profile.cls.required_roles = ALL_ROLES
+client_login.cls.required_roles = None

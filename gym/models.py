@@ -25,12 +25,51 @@ class CustomUser(models.Model):
         verbose_name = "Custom User"
         verbose_name_plural = "Custom Users"
 
-class Client(models.Model):
-    SUBSCRIPTION_CHOICES = [
-        ('standard', 'Standard'),
-        ('premium', 'Premium'),
-        ('personalized', 'Personalized'),
+class Plan(models.Model):
+    COLOR_CHOICES = [
+        ('blue', 'Azul'),
+        ('purple', 'Morado'),
+        ('green', 'Verde'),
+        ('orange', 'Naranja'),
+        ('red', 'Rojo'),
+        ('gray', 'Gris'),
     ]
+
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True, max_length=50)
+    description = models.TextField(blank=True, default='')
+    price = models.PositiveIntegerField(help_text='Precio en COP')
+    duration_days = models.PositiveIntegerField(default=30)
+    features = models.JSONField(default=list)
+    color = models.CharField(max_length=20, choices=COLOR_CHOICES, default='blue')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Plan'
+        verbose_name_plural = 'Planes'
+        ordering = ['price', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.price is None:
+            raise ValidationError({'price': 'El precio es obligatorio.'})
+        if self.duration_days is None or self.duration_days < 1:
+            raise ValidationError({'duration_days': 'La duración debe ser de al menos 1 día.'})
+        if not isinstance(self.features, list):
+            raise ValidationError({'features': 'Las características deben ser una lista.'})
+        if any(not isinstance(item, str) or not item.strip() for item in self.features):
+            raise ValidationError({'features': 'Cada característica debe ser un texto.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class Client(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True, related_name='client_profile')
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
@@ -41,7 +80,7 @@ class Client(models.Model):
     goals = models.JSONField(default=list)
     join_date = models.DateField()
     profile_image = models.URLField(null=True, blank=True)
-    subscription_type = models.CharField(max_length=20, choices=SUBSCRIPTION_CHOICES, null=True, blank=True)
+    subscription_type = models.CharField(max_length=50, null=True, blank=True)
     subscription_start = models.DateField(null=True, blank=True)
     subscription_end = models.DateField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
@@ -199,6 +238,7 @@ class ClientRoutine(models.Model):
 class RoutineProgress(models.Model):
     client_routine = models.ForeignKey(ClientRoutine, on_delete=models.CASCADE)
     workout = models.ForeignKey(Workout, on_delete=models.CASCADE)
+    started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField()
     notes = models.TextField(null=True, blank=True)
     rating = models.PositiveIntegerField(null=True, blank=True)

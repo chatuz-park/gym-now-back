@@ -15,12 +15,16 @@ class Command(BaseCommand):
             # Verificar si ya tiene un CustomUser
             custom_user, created = CustomUser.objects.get_or_create(user=user)
             
+            if custom_user.role in ('trainer', 'owner'):
+                self.stdout.write(
+                    f'Usuario {user.username}: se conserva rol "{custom_user.role}"'
+                )
+                continue
+
             # Determinar el rol basado en si tiene perfil de cliente
             if hasattr(user, 'client_profile') and user.client_profile is not None:
                 role = 'client'
             else:
-                # Para usuarios sin perfil de cliente, asignar 'guest' por defecto
-                # Los administradores pueden ser cambiados manualmente a 'owner' o 'trainer'
                 role = 'guest'
             
             # Actualizar el rol si es diferente

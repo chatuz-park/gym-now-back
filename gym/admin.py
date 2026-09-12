@@ -1,9 +1,16 @@
 from django.contrib import admin
 from django.utils import timezone
 from .models import (
-    CustomUser, Client, Exercise, Workout, WorkoutSet, Routine, 
-    ClientRoutine, RoutineProgress, ProgressMetrics, Goal
+    CustomUser, Client, Exercise, Workout, WorkoutSet, Routine,
+    ClientRoutine, RoutineProgress, ProgressMetrics, Goal, Plan
 )
+
+
+@admin.register(Plan)
+class PlanAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'price', 'duration_days', 'is_active', 'color']
+    list_filter = ['is_active', 'color']
+    search_fields = ['name', 'slug', 'description']
 
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
@@ -85,7 +92,7 @@ class ClientRoutineAdmin(admin.ModelAdmin):
 
 @admin.register(RoutineProgress)
 class RoutineProgressAdmin(admin.ModelAdmin):
-    list_display = ['client_routine', 'workout', 'completed_at', 'rating']
+    list_display = ['client_routine', 'workout', 'started_at', 'completed_at', 'rating']
     list_filter = ['completed_at', 'rating', 'client_routine__client']
     search_fields = ['client_routine__client__name', 'workout__name']
     readonly_fields = ['completed_at']

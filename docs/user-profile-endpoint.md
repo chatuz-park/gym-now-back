@@ -105,6 +105,8 @@ fetch('/api/user-profile/', {
 
 ## Roles Disponibles
 
+La implementación completa (matriz de endpoints, permisos y Swagger) está en [rbac.md](rbac.md).
+
 - **client**: Usuarios que tienen perfil de cliente en el gimnasio
 - **trainer**: Entrenadores del gimnasio
 - **guest**: Usuarios invitados o sin permisos específicos

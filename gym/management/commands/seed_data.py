@@ -2,8 +2,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import date, timedelta
 from gym.models import (
-    Client, Exercise, Workout, WorkoutSet, Routine, 
-    ClientRoutine, RoutineProgress, ProgressMetrics, Goal
+    Client, Exercise, Workout, WorkoutSet, Routine,
+    ClientRoutine, RoutineProgress, ProgressMetrics, Goal, Plan
 )
 
 class Command(BaseCommand):
@@ -24,6 +24,10 @@ class Command(BaseCommand):
         Exercise.objects.all().delete()
         Client.objects.all().delete()
         
+        # Crear planes
+        self.stdout.write('Creando planes...')
+        self.create_plans()
+
         # Crear ejercicios
         self.stdout.write('Creando ejercicios...')
         exercises = self.create_exercises()
@@ -55,6 +59,52 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS('¡Datos poblados exitosamente!')
         )
+
+    def create_plans(self):
+        defaults = [
+            {
+                'slug': 'standard',
+                'name': 'Estándar',
+                'description': 'Acceso básico al gimnasio',
+                'price': 199000,
+                'duration_days': 30,
+                'features': ['Acceso básico', '2 rutinas', 'Seguimiento básico'],
+                'color': 'blue',
+                'is_active': True,
+            },
+            {
+                'slug': 'premium',
+                'name': 'Premium',
+                'description': 'Acceso completo y seguimiento avanzado',
+                'price': 299000,
+                'duration_days': 30,
+                'features': [
+                    'Acceso completo',
+                    'Rutinas ilimitadas',
+                    'Seguimiento avanzado',
+                    'Consultas prioritarias',
+                ],
+                'color': 'purple',
+                'is_active': True,
+            },
+            {
+                'slug': 'personalized',
+                'name': 'Personalizada',
+                'description': 'Plan premium con sesiones 1:1 y nutrición',
+                'price': 399000,
+                'duration_days': 30,
+                'features': [
+                    'Todo de Premium',
+                    'Rutinas personalizadas',
+                    'Sesiones 1:1',
+                    'Nutrición incluida',
+                ],
+                'color': 'green',
+                'is_active': True,
+            },
+        ]
+        for data in defaults:
+            Plan.objects.update_or_create(slug=data['slug'], defaults=data)
 
     def create_exercises(self):
         exercises_data = [

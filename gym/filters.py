@@ -2,7 +2,8 @@ import django_filters
 from django_filters import rest_framework as filters
 from django.db.models import Q, Count
 from datetime import date
-from .models import Client, Routine, Exercise, Workout, Goal
+from django.contrib.auth.models import User
+from .models import Client, CustomUser, Routine, Exercise, Workout, Goal, Plan
 
 
 class ClientFilter(filters.FilterSet):
@@ -354,4 +355,45 @@ class GoalFilter(filters.FilterSet):
         return queryset.filter(
             Q(title__icontains=value) |
             Q(description__icontains=value)
+        )
+
+
+class PlanFilter(filters.FilterSet):
+    search = django_filters.CharFilter(method='search_filter', label='Buscar')
+    is_active = django_filters.BooleanFilter(field_name='is_active', label='Activo')
+    color = django_filters.ChoiceFilter(choices=Plan.COLOR_CHOICES, label='Color')
+
+    class Meta:
+        model = Plan
+        fields = {
+            'is_active': ['exact'],
+            'color': ['exact'],
+        }
+
+    def search_filter(self, queryset, name, value):
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(slug__icontains=value) |
+            Q(description__icontains=value)
+        )
+
+
+class UserFilter(filters.FilterSet):
+    search = django_filters.CharFilter(method='search_filter', label='Buscar')
+    role = django_filters.ChoiceFilter(
+        field_name='custom_profile__role',
+        choices=CustomUser.ROLE_CHOICES,
+        label='Rol',
+    )
+
+    class Meta:
+        model = User
+        fields = ['role']
+
+    def search_filter(self, queryset, name, value):
+        return queryset.filter(
+            Q(username__icontains=value) |
+            Q(email__icontains=value) |
+            Q(first_name__icontains=value) |
+            Q(last_name__icontains=value)
         ) 

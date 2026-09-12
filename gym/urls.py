@@ -3,10 +3,13 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ClientViewSet, ExerciseViewSet, WorkoutViewSet, WorkoutSetViewSet,
     RoutineViewSet, ClientRoutineViewSet, RoutineProgressViewSet,
-    ProgressMetricsViewSet, GoalViewSet, client_login, user_profile
+    ProgressMetricsViewSet, GoalViewSet, UserViewSet, PlanViewSet,
+    client_login, user_profile
 )
 
 router = DefaultRouter()
+router.register(r'users', UserViewSet)
+router.register(r'plans', PlanViewSet)
 router.register(r'clients', ClientViewSet)
 router.register(r'exercises', ExerciseViewSet)
 router.register(r'workouts', WorkoutViewSet)

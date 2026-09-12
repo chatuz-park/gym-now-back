@@ -1,5 +1,8 @@
+from datetime import timedelta
 from django.shortcuts import render
 from django.db import models
+from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Prefetch, Q
+from django.db.models.functions import TruncDate
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -19,7 +22,8 @@ from .models import (
 )
 from .serializers import (
     ClientSerializer, ExerciseSerializer, WorkoutSerializer, WorkoutSetSerializer,
-    RoutineSerializer, ClientRoutineSerializer, RoutineProgressSerializer,
+    RoutineSerializer, ClientRoutineSerializer, ClientRoutineListSerializer,
+    RoutineProgressSerializer, RoutineProgressListSerializer,
     ProgressMetricsSerializer, GoalSerializer, WorkoutCreateSerializer, RoutineCreateSerializer,
     UserProfileSerializer, UserRoleAdminSerializer, ProfileImageUploadSerializer,
     ExerciseImageUploadSerializer, GymTokenObtainPairSerializer,
@@ -28,7 +32,18 @@ from .serializers import (
 from .services import upload_file_to_s3, delete_file_from_s3
 from .permissions import (
     RoleMapMixin, ALL_ROLES, STAFF_ROLES, OWNER_ROLES,
-    get_user_role, get_user_client, is_member_role,
+    get_user_role, get_user_client, is_member_role, is_staff_role,
+)
+
+ROUTINE_TREE_PREFETCH = (
+    'routine__workouts__sets__exercise',
+)
+
+ACTIVE_CLIENT_ROUTINES = Prefetch(
+    'client_routines',
+    queryset=ClientRoutine.objects.filter(is_active=True)
+        .select_related('routine')
+        .prefetch_related(*ROUTINE_TREE_PREFETCH),
 )
 
 # Create your views here.
@@ -124,6 +139,12 @@ class ClientViewSet(RoleMapMixin, viewsets.ModelViewSet):
         'retrieve', 'progress', 'goals', 'routines', 'upload_profile_image',
     })
 
+    def get_queryset(self):
+        queryset = Client.objects.select_related('user')
+        if self.action in ('list', 'retrieve', 'me', 'routines'):
+            queryset = queryset.prefetch_related(ACTIVE_CLIENT_ROUTINES)
+        return queryset
+
     @swagger_auto_schema(
         operation_description="Lista de clientes con ordenamiento configurable",
         manual_parameters=[
@@ -155,7 +176,7 @@ class ClientViewSet(RoleMapMixin, viewsets.ModelViewSet):
     def progress(self, request, pk=None):
         """Obtener el progreso de un cliente específico"""
         client = self.get_object()
-        progress = ProgressMetrics.objects.filter(client=client).order_by('-date')
+        progress = ProgressMetrics.objects.filter(client=client).select_related('client').order_by('-date')
         serializer = ProgressMetricsSerializer(progress, many=True)
         return Response(serializer.data)
 
@@ -163,7 +184,7 @@ class ClientViewSet(RoleMapMixin, viewsets.ModelViewSet):
     def goals(self, request, pk=None):
         """Obtener los objetivos de un cliente específico"""
         client = self.get_object()
-        goals = Goal.objects.filter(client=client)
+        goals = Goal.objects.filter(client=client).select_related('client')
         serializer = GoalSerializer(goals, many=True)
         return Response(serializer.data)
 
@@ -171,9 +192,10 @@ class ClientViewSet(RoleMapMixin, viewsets.ModelViewSet):
     def routines(self, request, pk=None):
         """Obtener las rutinas asignadas a un cliente, incluyendo días asignados y detalles de la asignación"""
         client = self.get_object()
-        # Usar el serializer de detalle de asignación
         from .serializers import ClientRoutineDetailSerializer
-        assignments = client.client_routines.filter(is_active=True)
+        assignments = client.client_routines.filter(is_active=True).select_related('routine').prefetch_related(
+            *ROUTINE_TREE_PREFETCH
+        )
         serializer = ClientRoutineDetailSerializer(assignments, many=True)
         return Response(serializer.data)
 
@@ -268,6 +290,7 @@ class ClientViewSet(RoleMapMixin, viewsets.ModelViewSet):
                 {'error': 'No se encontró perfil de cliente para este usuario'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        client = self.get_queryset().filter(pk=client.pk).first() or client
         serializer = self.get_serializer(client)
         return Response(serializer.data)
 
@@ -700,8 +723,15 @@ class ClientRoutineViewSet(RoleMapMixin, viewsets.ModelViewSet):
         'retrieve', 'progress', 'complete_workout',
     })
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ClientRoutineListSerializer
+        return ClientRoutineSerializer
+
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = ClientRoutine.objects.select_related('client', 'client__user', 'routine')
+        if self.action != 'list':
+            queryset = queryset.prefetch_related(*ROUTINE_TREE_PREFETCH)
         if self.action == 'list' and is_member_role(get_user_role(self.request.user)):
             client = get_user_client(self.request.user)
             if client is None:
@@ -798,7 +828,11 @@ class ClientRoutineViewSet(RoleMapMixin, viewsets.ModelViewSet):
     def progress(self, request, pk=None):
         """Obtener el progreso de una rutina de cliente específica"""
         client_routine = self.get_object()
-        progress = RoutineProgress.objects.filter(client_routine=client_routine).order_by('-completed_at')
+        progress = (
+            RoutineProgress.objects.filter(client_routine=client_routine)
+            .select_related('client_routine__client', 'workout')
+            .order_by('-completed_at')
+        )
         serializer = RoutineProgressSerializer(progress, many=True)
         return Response(serializer.data)
 
@@ -889,6 +923,24 @@ class ClientRoutineViewSet(RoleMapMixin, viewsets.ModelViewSet):
 class RoutineProgressViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = RoutineProgress.objects.all()
     serializer_class = RoutineProgressSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return RoutineProgressListSerializer
+        return RoutineProgressSerializer
+
+    def get_queryset(self):
+        queryset = RoutineProgress.objects.select_related(
+            'client_routine__client',
+            'client_routine__routine',
+            'workout',
+        )
+        if self.action != 'list':
+            queryset = queryset.prefetch_related(
+                *ROUTINE_TREE_PREFETCH,
+                'workout__sets__exercise',
+            )
+        return queryset
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['client_routine', 'workout', 'completed_at']
     ordering_fields = ['completed_at', 'rating']
@@ -927,6 +979,9 @@ class RoutineProgressViewSet(RoleMapMixin, viewsets.ModelViewSet):
 class ProgressMetricsViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = ProgressMetrics.objects.all()
     serializer_class = ProgressMetricsSerializer
+
+    def get_queryset(self):
+        return ProgressMetrics.objects.select_related('client')
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['client', 'date']
     ordering_fields = ['date', 'weight', 'body_fat', 'muscle_mass']
@@ -981,13 +1036,16 @@ class ProgressMetricsViewSet(RoleMapMixin, viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-        progress = self.queryset.filter(client_id=client_id).order_by('-date')
+        progress = self.get_queryset().filter(client_id=client_id).order_by('-date')
         serializer = self.get_serializer(progress, many=True)
         return Response(serializer.data)
 
 class GoalViewSet(RoleMapMixin, viewsets.ModelViewSet):
     queryset = Goal.objects.all()
     serializer_class = GoalSerializer
+
+    def get_queryset(self):
+        return Goal.objects.select_related('client')
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = GoalFilter
     ordering_fields = ['deadline', 'target_value', 'current_value']
@@ -1054,14 +1112,14 @@ class GoalViewSet(RoleMapMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def completed(self, request):
         """Obtener objetivos completados"""
-        goals = self.queryset.filter(is_completed=True)
+        goals = self.get_queryset().filter(is_completed=True)
         serializer = self.get_serializer(goals, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def pending(self, request):
         """Obtener objetivos pendientes"""
-        goals = self.queryset.filter(is_completed=False)
+        goals = self.get_queryset().filter(is_completed=False)
         serializer = self.get_serializer(goals, many=True)
         return Response(serializer.data)
 
@@ -1210,3 +1268,251 @@ def user_profile(request):
 
 user_profile.cls.required_roles = ALL_ROLES
 client_login.cls.required_roles = None
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_summary(request):
+    """KPIs del owner y series ligeras para las gráficas del inicio."""
+    if not is_staff_role(get_user_role(request.user)):
+        return Response(
+            {'detail': 'No tienes permiso para acceder a este recurso.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    today = timezone.now().date()
+    in_7 = today + timedelta(days=7)
+    in_30 = today + timedelta(days=30)
+    ago_7 = today - timedelta(days=7)
+    ago_14 = today - timedelta(days=13)
+    ago_30 = today - timedelta(days=30)
+    week_ago = timezone.now() - timedelta(days=7)
+    fortnight_ago = timezone.now() - timedelta(days=14)
+
+    alive_q = Q(subscription_end__isnull=True) | Q(subscription_end__gte=today)
+    expired_q = Q(subscription_end__lt=today)
+
+    clients_count = Client.objects.count()
+    active_subscriptions = Client.objects.filter(alive_q).count()
+    expired_subscriptions = Client.objects.filter(expired_q).count()
+    expiring_7 = Client.objects.filter(subscription_end__gte=today, subscription_end__lte=in_7)
+    expiring_30 = Client.objects.filter(subscription_end__gte=today, subscription_end__lte=in_30)
+
+    plans_by_slug = {plan.slug: plan for plan in Plan.objects.all()}
+
+    def plan_price(slug):
+        plan = plans_by_slug.get(slug)
+        return plan.price if plan else 0
+
+    def plan_name(slug):
+        plan = plans_by_slug.get(slug)
+        return plan.name if plan else (slug or 'Sin plan')
+
+    estimated_monthly_revenue = sum(
+        plan_price(slug)
+        for slug in Client.objects.filter(alive_q).values_list('subscription_type', flat=True)
+    )
+    revenue_at_risk = sum(
+        plan_price(slug)
+        for slug in expiring_30.values_list('subscription_type', flat=True)
+    )
+
+    plan_mix = []
+    for row in Client.objects.values('subscription_type').annotate(count=Count('id')).order_by('-count'):
+        slug = row['subscription_type']
+        plan_mix.append({
+            'slug': slug,
+            'name': plan_name(slug),
+            'count': row['count'],
+            'price': plan_price(slug),
+        })
+
+    clients_with_routine = Client.objects.filter(client_routines__is_active=True).distinct().count()
+    sessions_7_days = RoutineProgress.objects.filter(completed_at__gte=week_ago).count()
+    active_clients_7_days = (
+        RoutineProgress.objects.filter(completed_at__gte=week_ago)
+        .values('client_routine__client')
+        .distinct()
+        .count()
+    )
+    engagement_7_days = round((active_clients_7_days / clients_count) * 100) if clients_count else 0
+
+    trained_14_ids = set(
+        RoutineProgress.objects.filter(completed_at__gte=fortnight_ago)
+        .values_list('client_routine__client_id', flat=True)
+    )
+    inactive_subscribers = list(
+        Client.objects.filter(alive_q).exclude(id__in=trained_14_ids).order_by('name')
+    )
+
+    measured_30_ids = set(
+        ProgressMetrics.objects.filter(date__gte=ago_30).values_list('client_id', flat=True)
+    )
+    clients_without_metrics_30 = Client.objects.filter(alive_q).exclude(id__in=measured_30_ids).count()
+
+    goal_stats = Goal.objects.aggregate(
+        total=Count('id'),
+        completed=Count('id', filter=Q(is_completed=True)),
+        overdue=Count('id', filter=Q(is_completed=False, deadline__lt=today)),
+        on_track=Count('id', filter=Q(is_completed=False, deadline__gte=today)),
+    )
+    progress_avg = Goal.objects.filter(is_completed=False, deadline__gte=today).exclude(target_value=0).aggregate(
+        average_progress=Avg(
+            ExpressionWrapper(
+                F('current_value') * 100.0 / F('target_value'),
+                output_field=FloatField(),
+            )
+        )
+    )['average_progress']
+
+    recent_metrics = list(
+        ProgressMetrics.objects.select_related('client')
+        .order_by('-date')
+        .values('id', 'client_id', 'client__name', 'weight', 'date')[:5]
+    )
+    recent_sessions = list(
+        RoutineProgress.objects.select_related('client_routine__client', 'workout')
+        .order_by('-completed_at')
+        .values(
+            'id',
+            'client_routine__client_id',
+            'client_routine__client__name',
+            'workout__name',
+            'started_at',
+            'completed_at',
+        )[:8]
+    )
+    recent_goals = list(
+        Goal.objects.select_related('client')
+        .order_by('-deadline')
+        .values(
+            'id',
+            'client__name',
+            'title',
+            'current_value',
+            'target_value',
+            'unit',
+            'deadline',
+            'is_completed',
+        )[:5]
+    )
+
+    body_trend = list(
+        ProgressMetrics.objects.values('date')
+        .annotate(
+            weight=Avg('weight'),
+            body_fat=Avg('body_fat'),
+            muscle_mass=Avg('muscle_mass'),
+        )
+        .order_by('date')
+    )
+
+    session_days = {
+        row['day']: row['total']
+        for row in (
+            RoutineProgress.objects.filter(completed_at__date__gte=ago_14)
+            .annotate(day=TruncDate('completed_at'))
+            .values('day')
+            .annotate(total=Count('id'))
+        )
+        if row['day']
+    }
+    sessions_trend = []
+    cursor = ago_14
+    while cursor <= today:
+        sessions_trend.append({
+            'date': cursor.isoformat(),
+            'sessions': session_days.get(cursor, 0),
+        })
+        cursor += timedelta(days=1)
+
+    return Response({
+        'clients_count': clients_count,
+        'active_subscriptions': active_subscriptions,
+        'expired_subscriptions': expired_subscriptions,
+        'expiring_7_days': expiring_7.count(),
+        'expiring_30_days': expiring_30.count(),
+        'estimated_monthly_revenue': estimated_monthly_revenue,
+        'revenue_at_risk_30_days': revenue_at_risk,
+        'new_clients_7_days': Client.objects.filter(join_date__gte=ago_7).count(),
+        'new_clients_30_days': Client.objects.filter(join_date__gte=ago_30).count(),
+        'active_routines': ClientRoutine.objects.filter(is_active=True).count(),
+        'clients_with_routine': clients_with_routine,
+        'clients_without_routine': max(clients_count - clients_with_routine, 0),
+        'sessions_7_days': sessions_7_days,
+        'active_clients_7_days': active_clients_7_days,
+        'engagement_7_days': engagement_7_days,
+        'clients_without_metrics_30_days': clients_without_metrics_30,
+        'completed_goals': goal_stats['completed'],
+        'goals_count': goal_stats['total'],
+        'goals_overdue': goal_stats['overdue'],
+        'goals_on_track': goal_stats['on_track'],
+        'average_progress': round(progress_avg or 0),
+        'plan_mix': plan_mix,
+        'expiring_clients': [
+            {
+                'id': client.id,
+                'name': client.name,
+                'plan_name': plan_name(client.subscription_type),
+                'subscription_end': client.subscription_end,
+                'price': plan_price(client.subscription_type),
+            }
+            for client in expiring_30.order_by('subscription_end')
+        ],
+        'inactive_subscribers': [
+            {
+                'id': client.id,
+                'name': client.name,
+                'plan_name': plan_name(client.subscription_type),
+            }
+            for client in inactive_subscribers
+        ],
+        'body_trend': [
+            {
+                'date': item['date'].isoformat() if item['date'] else None,
+                'weight': round(item['weight'], 1) if item['weight'] is not None else None,
+                'body_fat': round(item['body_fat'], 1) if item['body_fat'] is not None else None,
+                'muscle_mass': round(item['muscle_mass'], 1) if item['muscle_mass'] is not None else None,
+            }
+            for item in body_trend
+            if item['date']
+        ],
+        'sessions_trend': sessions_trend,
+        'recent_metrics': [
+            {
+                'id': item['id'],
+                'client_id': item['client_id'],
+                'client_name': item['client__name'],
+                'weight': item['weight'],
+                'date': item['date'],
+            }
+            for item in recent_metrics
+        ],
+        'recent_sessions': [
+            {
+                'id': item['id'],
+                'client_id': item['client_routine__client_id'],
+                'client_name': item['client_routine__client__name'],
+                'workout_name': item['workout__name'],
+                'started_at': item['started_at'],
+                'completed_at': item['completed_at'],
+            }
+            for item in recent_sessions
+        ],
+        'recent_goals': [
+            {
+                'id': item['id'],
+                'client_name': item['client__name'],
+                'title': item['title'],
+                'current_value': item['current_value'],
+                'target_value': item['target_value'],
+                'unit': item['unit'],
+                'deadline': item['deadline'],
+                'is_completed': item['is_completed'],
+            }
+            for item in recent_goals
+        ],
+    })
+
+
+dashboard_summary.cls.required_roles = STAFF_ROLES

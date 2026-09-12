@@ -138,9 +138,13 @@ class ClientSerializer(serializers.ModelSerializer):
         return None
 
     def get_assigned_routines(self, obj):
-        """Obtener las asignaciones completas de rutinas con sus detalles"""
-        from .serializers import ClientRoutineDetailSerializer
-        return ClientRoutineDetailSerializer(obj.client_routines.filter(is_active=True), many=True).data
+        """Asignaciones activas. Usa prefetch si el queryset ya las cargó."""
+        prefetched = getattr(obj, '_prefetched_objects_cache', None) or {}
+        if 'client_routines' in prefetched:
+            assignments = [item for item in obj.client_routines.all() if item.is_active]
+        else:
+            assignments = obj.client_routines.filter(is_active=True)
+        return ClientRoutineDetailSerializer(assignments, many=True, context=self.context).data
 
     def validate_email(self, value):
         """Validar que el email sea único"""
@@ -181,8 +185,27 @@ class ClientSerializer(serializers.ModelSerializer):
                 })
         return attrs
 
+
+class ClientNestedSerializer(serializers.ModelSerializer):
+    """Cliente embebido en listados: sin assigned_routines ni árbol de rutinas."""
+    age = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Client
+        fields = [
+            'id', 'name', 'email', 'phone', 'profile_image',
+            'subscription_type', 'subscription_start', 'subscription_end', 'age',
+        ]
+
+
+class RoutineSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Routine
+        fields = ['id', 'name', 'frequency', 'days_per_week', 'duration']
+
+
 class ClientRoutineSerializer(serializers.ModelSerializer):
-    client = ClientSerializer(read_only=True)
+    client = ClientNestedSerializer(read_only=True)
     routine = RoutineSerializer(read_only=True)
     client_id = serializers.PrimaryKeyRelatedField(
         queryset=Client.objects.all(),
@@ -257,6 +280,39 @@ class ClientRoutineSerializer(serializers.ModelSerializer):
         
         return data
 
+
+class ClientRoutineListSerializer(serializers.ModelSerializer):
+    """Listado de asignaciones sin workouts/sets/ejercicios."""
+    client = ClientNestedSerializer(read_only=True)
+    routine = RoutineSummarySerializer(read_only=True)
+
+    class Meta:
+        model = ClientRoutine
+        fields = [
+            'id', 'client', 'routine', 'start_date', 'end_date',
+            'is_active', 'assigned_days',
+        ]
+
+
+class WorkoutSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Workout
+        fields = ['id', 'name']
+
+
+class RoutineProgressListSerializer(serializers.ModelSerializer):
+    """Listado de sesiones: solo lo que Dashboard / GlobalProgress pintan."""
+    client_routine = ClientRoutineListSerializer(read_only=True)
+    workout = WorkoutSummarySerializer(read_only=True)
+
+    class Meta:
+        model = RoutineProgress
+        fields = [
+            'id', 'client_routine', 'workout',
+            'started_at', 'completed_at', 'notes', 'rating',
+        ]
+
+
 class RoutineProgressSerializer(serializers.ModelSerializer):
     client_routine = ClientRoutineSerializer(read_only=True)
     workout = WorkoutSerializer(read_only=True)
@@ -280,7 +336,7 @@ class RoutineProgressSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'completed_at']
 
 class ProgressMetricsSerializer(serializers.ModelSerializer):
-    client = ClientSerializer(read_only=True)
+    client = ClientNestedSerializer(read_only=True)
     client_id = serializers.PrimaryKeyRelatedField(
         queryset=Client.objects.all(),
         source='client',
@@ -292,7 +348,7 @@ class ProgressMetricsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class GoalSerializer(serializers.ModelSerializer):
-    client = ClientSerializer(read_only=True)
+    client = ClientNestedSerializer(read_only=True)
     client_id = serializers.PrimaryKeyRelatedField(
         queryset=Client.objects.all(),
         source='client',

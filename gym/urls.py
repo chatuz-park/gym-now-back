@@ -4,7 +4,7 @@ from .views import (
     ClientViewSet, ExerciseViewSet, WorkoutViewSet, WorkoutSetViewSet,
     RoutineViewSet, ClientRoutineViewSet, RoutineProgressViewSet,
     ProgressMetricsViewSet, GoalViewSet, UserViewSet, PlanViewSet,
-    client_login, user_profile
+    client_login, user_profile, dashboard_summary
 )
 
 router = DefaultRouter()
@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/client-login/', client_login, name='client_login'),
     path('api/user-profile/', user_profile, name='user_profile'),
+    path('api/dashboard/', dashboard_summary, name='dashboard_summary'),
 ] 
